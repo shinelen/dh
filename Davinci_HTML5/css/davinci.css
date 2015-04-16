@@ -1,0 +1,277 @@
+html,body{
+		height:99%;
+
+	}
+	.dvMain_layout{
+		/*width: 100%;*/
+		height: 100%;
+		background-color: #F7F7F7;
+		overflow: hidden;
+	}
+	.dvToolbar_layout{
+		height: 40px;
+		/*background-color: #7EB0DF;*/
+		line-height: 50px;
+		display: table;
+		width: 100%;
+	}
+	.dvBottomToolbar_layout{
+		height: 50px;
+		background-color: #272822;
+		line-height: 50px;
+		display: table;
+		position: absolute;
+		bottom: 10px;
+		color: #FFF;
+		width: 100%;
+		opacity:0.5;
+		z-index: 300;
+	}
+	.dvBottomToolbar_layout:hover{
+		opacity:0.8;
+	}
+	/*.dvBottomToolbar_layout:hover{
+		height: 50px;
+		background-color: #272822;
+		line-height: 50px;
+	}*/
+	.dvListTab_layout{
+		width: 20%;
+		height: 100%;
+		/*background-color: #989898;*/
+		/*float: left;*/
+		position: absolute;
+		display: none;
+		overflow-x:hidden;
+		background-color:#FFFFFF;
+		opacity:0.5;
+		z-index: 999;
+	}
+	.dvListTab_layout:hover{		
+		opacity:1;
+	}
+	.dvPageNav_layout{
+		width: 20%;
+		height: 100%;
+		/*background-color: #989898;*/
+		/*float: left;*/
+		position: absolute;
+		display: none;
+		overflow-x:hidden;
+		background-color:#FFFFFF;
+		opacity:0.5;
+		border-left: 1px solid #999999;
+		right:0px;
+		z-index: 999;
+		text-align: center;
+	}
+	.dvPageNav_layout>div{
+		width: 100%;
+		float: left;
+	}
+	.dvPageNav_layout input{
+		width: 30px;
+		height: 25px;
+		vertical-align:middle;
+	}
+	.dvPageNav_layout .pagePanel .page_preview_layout {
+		border: #94B7E1 1px solid;
+		width:95%;
+		float: right;
+		overflow-Y: scroll;
+	}
+	.dvPageNav_layout .pagePanel .page_preview_layout .pagePreview .previewDiv{
+		border: #AAB4B4 1px solid;
+		margin: 0 auto;
+		margin-top: 10px;
+		cursor: default;
+	}
+	.dvPageNav_layout .pagePanel .page_preview_layout .pagePreview .previewDiv:hover{
+		background-color: #E6EFF9;
+	}
+	.dvPageNav_layout .pagePanel .page_preview_layout .pagePreview .selected{
+		border: #70A0D8 1px solid;
+		background-color: #BBCEE3;
+	}
+	.pagePreview>.previewDiv>.previewImgDiv{
+		height: 100%;
+		padding-top: 5px;
+		position: relative;
+	}
+	.pagePreview>.previewDiv>.previewImgDiv>.previewSpanDiv{
+		position: absolute;
+		bottom: 3px;
+		width: 100%;
+	}
+	.dvPageNav_layout:hover{		
+		opacity:1;
+	}
+	.dvCanvas_layout{
+		width: 100%;
+		height: 100%;
+		background-color: #E6E6E6;
+		float: left;
+	}
+	.dvCanvasContaiiner_layout{
+		height: 100%;
+		border-left: 1px solid #999999;
+		border-right: 1px solid #999999;
+		border-bottom: 1px solid #999999;
+		position: relative;
+	}
+	.dvCanvasStadCompare{
+		width: 33.3333%;
+		height: 100%;
+		float: left;
+		
+	}
+	.dvCanvasTabCompare{
+		width: 100%;
+		height: 100%;
+		float: left;
+		/*display: none;*/
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		background-color: #E6E6E6;
+	}
+	.dvCanvasSingle{
+		width: 100%;
+		height: 100%;
+		float: left;
+	}
+	.dvCanvas2pages{
+		width: 50% !important;
+		height: 100%;
+		float: left;
+		background-color: #E6E6E6;
+		z-index: 1;
+		position: relative;
+	}
+	.dvCanvas{
+		height: 100%;
+		border-left: 1px solid #999999;
+		overflow: hidden;
+		/*border-right: 1px solid #999999;*/
+	}
+	.dvToolbar{
+		/*background-image:url(css/images/nav-bg.png);*/
+		background-repeat: repeat-x;
+		border: 1px solid #d4d4d4;
+		border-radius: 4px;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.067);
+		min-height: 40px;
+		padding-left: 20px;
+		padding-right: 20px;
+	}
+	.dvListTab{
+		height:100%;
+		border-right:1px solid #999999;
+		position: relative;
+		overflow: auto;
+	}
+	.dvSliderIcon{
+		position: absolute;
+		right: 0px;
+		top: 50%;
+		cursor: col-resize;
+	}
+	.clear{
+		clear: both;
+	}
+	.gicon{
+		color:#E6E6E6;
+	}
+	.gicon:hover{
+		color:#8F9088;
+	}
+	.dv-annotation-view{
+		position: absolute;
+		width: 230px;
+		height: 150px;
+		top: 0px;
+		left: 0px;
+		text-align: right;
+		background-color: #666;
+		display: none;
+		z-index: 200;
+		-webkit-box-shadow: #666 0px 0px 10px;
+		-moz-box-shadow: #666 0px 0px 10px;
+	}
+	.dv-annotation-view.selected{
+		z-index: 201;
+	}
+	.dv-annotation-view-layout-left{
+		width: 30px;
+		height: 120px;
+		float: left;
+	}
+	.dv-annotation-view-layout-right{
+		width: 200px;
+		height: 120px;
+		float: left;
+	}
+	.dv-annotation-view-layout-bottom{
+		width: 230px;
+		height: 30px;
+		float: left;
+	}
+	.dv-annotation-view-btn{
+		width: 20px;
+		height: 20px;
+		margin: 4px 10px;
+		cursor: pointer;
+	}
+	.dv-annotation-text{
+		width: 180px;
+		height: 110px;
+		margin: 5px;
+	}
+	.dv-annotation{
+		position: absolute;
+		width: 25px;
+		height: 20px;
+		top: 0px;
+		left: 0px;
+		text-align: center;
+		color: #000000;
+		font-weight: bold;
+		border-radius:5px;
+		cursor: default;
+		z-index: 100;
+	}
+	.dvListTab table div{
+		overflow: hidden; 
+		word-break: normal; 
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		-o-text-overflow: ellipsis
+		float:  left; 
+	}
+	.dvListTab .fileName{
+		height: 25px;
+		line-height: 25px; 
+	}
+	.dvPrint{}
+	.dvPrint .title{
+		font-weight:bold;
+		margin : 10px ;
+	}
+	.dvPrint .content div label{
+		width: 50%;
+		text-align:right;
+		margin-top:  10px;
+		margin-bottom: 10px;
+		margin-right: 50px; 
+	}
+	.dvPreference{}
+	.dvPreference div label{
+		width: 50%;
+		text-align:right;
+		padding-top:  10px;
+		margin-right: 50px; 
+	}
+	.dvPreference div input,.dvPreference div select{
+		margin-right: 10px;
+		margin-left: 10px; 
+	}
