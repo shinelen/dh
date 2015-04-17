@@ -512,7 +512,124 @@
 						DVUtil.error("eu.closeLoading() >> can not find dv_loading.")
 					}					
 				}
+				eu.Dialog = function(conf){
+					var _this = this,
+					u = DVUtil,
+					_defConf = {
+						id:"myDialog",
+						title:"Modal title",
+						width:500,
+						height:400,
+						body:"",
+						footer:""
+					},
+					_conf = $.extend(_defConf,conf),
+					$container;
+					this.destroy = function(){
+						_destroyElement();
+						_this = null;
+					}
+					this.element = $container;
 
+					this.init = function(){
+						_createElement();
+						$("body").append($container);
+					}
+					function _destroyElement(){
+						if($container&&$container.length>0){
+							$container.remove();
+						}
+
+						_this.element = $container = null;
+					}
+					function _createElement(){
+						_destroyElement();
+						_this.element = $container = eu.div(null,null,{
+							"position":"fixed",
+							"top":"0px",
+							"left":"0px",
+							"width":_conf.width+"px",
+							"height":_conf.height+"px",
+							"z-index":9999
+							
+						});
+						var $content = eu.div("modal-content"),
+						$body = eu.div("modal-body").html(_conf.body),
+						$header = eu.div("modal-header dvUnselected",null,{
+							"cursor":"move"
+						}),
+						$footer = eu.div("modal-footer").html(_conf.footer),
+						$title = eu.h4("modal-title").text(_conf.title),
+						$closeBtn = eu.button("close",{
+							"button":"button",
+							"data-dismiss":"modal"
+						})
+						.append(
+							eu.span(null,{
+								"aria-hidden":"true"
+							}).text("x")
+						)
+						.append(
+							eu.span("sr-only").text("Close")
+						),
+						isMove = false;
+
+						$header
+						.append(
+							$closeBtn
+						)
+						.append(
+							$title
+						);
+						$content
+						.append($header)
+						.append($body)
+						.append($footer);
+
+						$container.html($content);
+
+						$closeBtn.bind("click",function(e){
+							u.stopEvent(e);
+							$container.trigger("dialog-close",[_this]);
+							_this.destroy();
+						});
+						function downEvent(e){
+							u.stopEvent(e);
+							isMove = true;
+						}
+						function moveEvent(e){
+							u.stopEvent(e);
+							if(isMove){
+								var x = e.clientX,
+								y = e.clientY,
+								w = $container.width(),
+								h = $container.height();
+								$container.css({
+									"top":y-20+"px",
+									"left":(x-w/2)+"px"
+								});
+							}
+						}
+						function upEvent(e){
+							u.stopEvent(e);
+							isMove = false;
+						}
+						$header
+						.bind("mousedown",downEvent)
+						.bind("mousemove",moveEvent)
+						.bind("mouseup",upEvent);
+
+						if($header.get(0).addEventListener){
+							$header.get(0).addEventListener("touchstart",downEvent);
+							$header.get(0).addEventListener("touchmove",moveEvent);
+							$header.get(0).addEventListener("touchend",upEvent);
+						}
+
+					}
+					
+
+
+				}
 				function _dialogClass(config){
 					var _dialogDiv,
 					_modal_dialog,
@@ -638,6 +755,7 @@
 
 						return num;
 		    		}
+
 		    		u.log = function(message){
 		    			if(DVDebug&&this.chkObject(console)){
 		    				console.log(message);
@@ -652,7 +770,8 @@
 		    			this.error(e);
 		    			fn();
 		    		}
-		    		u.stopEvent = function(e){
+		    		
+					u.stopEvent = function(e){
 		    			if ( e && e.preventDefault ) {
 	    					e.preventDefault(); 
 	    				}
@@ -662,7 +781,6 @@
 						  e.stopPropagation();// 其它浏览器下阻止冒泡
 						}
 		    		}
-
 				u.callJSON = function(url,params,async,successfn,failfn){
 					var json,parameter,parameterArray,
 					callNumber = "JSON_"+Math.ceil(Math.random()*1000000000000),
@@ -3003,7 +3121,13 @@
 			    								{"label":"Cyan","data":"Cyan"},
 			    								{"label":"Yellow","data":"Yellow"},
 			    								{"label":"Magenta","data":"Magenta"},
-			    								{"label":"Black","data":"Black"}];
+			    								{"label":"Black","data":"Black"}],
+			    				page = 1;
+			    			if(dv_brand==BRAND){
+			    				page = dv_page.page1;
+			    			}else if(dv_brand==BRAND_COMPARE){
+			    				page = dv_page2.page1;
+			    			}
 			    			function _success(data){
 			    				var extendSepration = data,//dv_brand==BRAND ? dv_page_info.separation : dv_page_info2.separation,
 				    			extendSeprationArray = extendSepration?extendSepration.split(","):null;
@@ -3040,8 +3164,9 @@
 				    				_openView();
 				    			}
 			    			}
-			    			DVUtil.callJSON("separation.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"dataType":DATA_TYPE},null,_success,_fail);
+			    			DVUtil.callJSON("separation.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"dataType":DATA_TYPE,"page":page},null,_success,_fail);
 			    			
+
 			    			
 			    		}
 
@@ -3434,12 +3559,114 @@
 
 			    	DVDensitometerClass = function(){
 			    		DVToolBtnClass.prototype.constructor.call(this);
-			    		var _that = this;
+			    		var _that = this,
+			    		_dialog,
+			    		$tablelist,
+			    		$mouseX,
+			    		$mouseY,
+			    		$currX,
+			    		$currY,
+			    		_lan = dvLan.densitometer;
+
 			    		this.btnICON = ICON_DENSTIOMETER;
-			    		
+			    		this.updateDetail = function(x,y){
+
+			    		}
+			    		this.updateCor = function(x,y){
+							if((_dialog&&_dialog.element)){
+								$mouseX.text(Math.round(x>0?x:0));
+								$mouseY.text(Math.round(y>0?y:0));
+							}
+			    		}
+			    		function _createBody(){			    			
+			    			$mouseX = eu.div("col-sm-3");
+			    			$mouseY = eu.div("col-sm-3");
+			    			$currX = eu.div("col-sm-3");
+			    			$currY = eu.div("col-sm-3");
+			    			$tablelist = eu.tbody();
+			    			var $body = eu.div("form-horizontal"),
+			    			$mouseCorRow = eu.div("form-group").append(
+								eu.div("col-sm-4").text(_lan.mouse_coord)
+			    			).append(
+								eu.div("col-sm-1").text("X")
+			    			).append(
+								$mouseX
+			    			).append(
+								eu.div("col-sm-1").text("Y")
+			    			).append(
+								$mouseY
+			    			),
+			    			$currentCorRow = eu.div("form-group").append(
+								eu.div("col-sm-4").text(_lan.curr_coord)
+			    			).append(
+								eu.div("col-sm-1").text("X")
+			    			).append(
+								$currX
+			    			).append(
+								eu.div("col-sm-1").text("Y")
+			    			).append(
+								$currY
+			    			),
+			    			$tableRow = eu.div("form-group").append(
+								eu.div("col-sm-12").html(
+									eu.table("table table-bordered table-striped").append(
+										eu.thead().append(
+											eu.th().text(_lan.color)
+										).append(
+											eu.th().text(_lan.value)
+										)
+									).append(
+										$tablelist
+									)
+								)
+			    			);
+
+			    			$body
+			    			.append($mouseCorRow)
+			    			.append($currentCorRow)
+			    			.append($tableRow);
+
+			    			return $body;
+			    			
+			    		}
 			    		function _clickEvent(e){
-			    			var dialog = eu.openDialog("","content","buttons");
-			    			dialog.open();
+			    			//var dialog = eu.openDialog("","content","buttons");
+			    			//dialog.open();
+			    			if(dv_toolbar_action!=TOOL_DENSITOMETER){
+			    				DVToolbar.Toolbar.removeAllBtnsActiveExcept(_that);
+			    				_that.getElement().addClass("active");
+								dv_toolbar_action = TOOL_DENSITOMETER;
+								if(!(_dialog&&_dialog.element)){
+									$tablelist = null;
+									$mouseX = null;
+									$mouseY = null;
+									$currX = null;
+									$currY = null;
+									_dialog = new eu.Dialog({
+										id:"DVDensitometer",
+										title:"Densitometer",
+										width:400,
+										height:500,
+										body:_createBody(),
+										footer:""
+									});
+									_dialog.init();
+									_dialog.element.bind("dialog-close",function(e){										
+										_that.getElement().removeClass("active");
+			    						dv_toolbar_action = TOOL_NONE;
+									})
+								}
+			    			}else{
+			    				_dialog.destroy();
+			    				_that.getElement().removeClass("active");
+			    				dv_toolbar_action = TOOL_NONE;
+			    			}
+			    			
+			    			
+			    			
+			    		}
+			    		this.initEvents = function(){
+			    			_that.getElement().bind("click",{},_clickEvent)
 			    		}
 		    		}
 
@@ -4211,20 +4438,22 @@ var num = 1 ;
 										_curPageInput.val(_previewDiv.attr("title"));
 										_curPageSpan.text(_curPage);
 
-										dv_davinci.get2PageInfo(_curPage2);
-										if(imageInfo==dv_image_info){	    
-					    					_dvCanvasSingle.addClass("dvCanvas2pages");
-					    				}else if(imageInfo==dv_image_info1){	
-					    					_dvCanvasStadCompare3.hide();
-					    					_dvCanvasStadCompare2.hide();
-					    					_dvCanvasStadCompare1.addClass("dvCanvas2pages");
-					    				}else if(imageInfo==dv_image_info2){			
-					    					_dvCanvasStadCompare3.hide();		
-					    					_dvCanvasStadCompare1.hide();	    					
-					    					_dvCanvasStadCompare2.addClass("dvCanvas2pages");
-					    				}
-					    				_dvCanvas2pages.show();
-					    				dv_canvas_page.openViewer();
+										dv_davinci.get2PageInfo(_curPage2,function(){
+											if(imageInfo==dv_image_info){	    
+												_dvCanvasSingle.addClass("dvCanvas2pages");
+											}else if(imageInfo==dv_image_info1){	
+												_dvCanvasStadCompare3.hide();
+												_dvCanvasStadCompare2.hide();
+												_dvCanvasStadCompare1.addClass("dvCanvas2pages");
+											}else if(imageInfo==dv_image_info2){			
+												_dvCanvasStadCompare3.hide();		
+												_dvCanvasStadCompare1.hide();	    					
+												_dvCanvasStadCompare2.addClass("dvCanvas2pages");
+											}
+											_dvCanvas2pages.show();
+											dv_canvas_page.openViewer();
+										});
+										
 
 									}
 									if(dvnum==0){
@@ -4546,6 +4775,7 @@ var num = 1 ;
       						ERROR_COLOR_FILL = "#EF7F79",
       						W_S = 5,H_S = 5,
       						anno_drawer;
+
       						// DVUtil.log(x+","+y);
       						if(viewer==dv_viewer){
       							anno_drawer = dv_annos_drawer;
@@ -4573,7 +4803,10 @@ var num = 1 ;
 
 
 		    				if(dv_toolbar_action!=TOOL_NONE){
-	    			 			if(dv_toolbar_action==TOOL_ZOOM&&_dragging){
+		    					if(dv_toolbar_action==TOOL_DENSITOMETER){
+		    						var sencePoint = DVDrawerUtil.dvToImageCor(vpoint_mouseup.x,vpoint_mouseup.y);
+		    						DVToolbar.Toolbar.getDVDensitometer()?DVToolbar.Toolbar.getDVDensitometer().updateCor(sencePoint.x,sencePoint.y):null;
+	    			 			}else if(dv_toolbar_action==TOOL_ZOOM&&_dragging){
 		    			 			var w = Math.abs(x - _mousedownOffsetX),
 		    			 			h = Math.abs(y - _mousedownOffsetY),
 		    			 			_x = _mousedownOffsetX>x ? x :_mousedownOffsetX,
