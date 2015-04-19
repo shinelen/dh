@@ -5171,10 +5171,10 @@ var num = 1 ;
 					this.storeImagedata = function(){
 		    				(_context&&_canvas)?_orgImgdata = _context.getImageData(0, 0,_canvas.width,_canvas.height):null;
 		    			}
-		    			this.setImagedata = function(imagedata){
-		    				imagedata = !imagedata?_orgImgdata:imagedata;
-		    				_context?_context.putImageData(imagedata,0,0):null;
-		    			}
+	    			this.setImagedata = function(imagedata){
+	    				imagedata = !imagedata?_orgImgdata:imagedata;
+	    				_context?_context.putImageData(imagedata,0,0):null;
+	    			}
 					this.getCanvasElement = function(){
 						return _dvCanvas;
 					}
