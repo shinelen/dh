@@ -4436,7 +4436,6 @@ $.EventSource.prototype = /** @lends OpenSeadragon.EventSource.prototype */{
      */
     function onMouseDown( tracker, event ) {
         var gPoint;
-        console.log("down2");
         event = $.getEvent( event );
         gPoint = {
             id: $.MouseTracker.mousePointerId,

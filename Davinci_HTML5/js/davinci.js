@@ -47,6 +47,7 @@
 				dv_item:"",
 				use_ip:"",
 				dateFormat:"",
+				url_parmeters:{},
 				containerElement:null
 			},
 
@@ -223,6 +224,9 @@
 			dv_doc_obj,
 			dv_doc_obj_compare,
 			dv_loading,
+			DV_SINGLE = 1,
+			DV_COMPARE = 2,
+			DV_VIDEO = 3,
 			//CONSTANT
 			ICON_SLIDER = "css/images/slider-icon.png",		
 			
@@ -245,6 +249,7 @@
 			ICON_FITTO_WINDOW = "css/icons/fitToWindow.png",
 			ICON_FULLSCREEN = "css/icons/fullscreen.png",
 			ICON_APPROVAL = "css/icons/approve.png",
+			ICON_HAND = "css/icons/hand_tool.png",
 			
 			ICON_EDIT = "css/icons/edit.png",
 
@@ -254,9 +259,6 @@
 			ICON_ARROW = "css/icons/arrow.png",
 			ICON_FREEHAND = "css/icons/pencil.png",
 			ICON_PREFERENCES = "css/icons/preferences.gif",
-			ICON_ACCEPT = "css/icons/accept.png",
-			ICON_DELETE = "css/icons/delete.png",
-			ICON_CLOSE = "css/icons/cross.png",
 
 			TOOL_ZOOM = "zoom",
 			TOOL_ZOOM100 = "zoom100",
@@ -284,6 +286,14 @@
 		 	ANNO_HEIGHT = 20,
 		 	ANNO_ROUND = 4,
 		 	ANNO_ALPHA = 0.8,
+
+		 	PC = "PC",
+			MOBILE = "mobile",
+			IPAD = "ipad",
+			IPHONE = "iphone",
+			ANDROID = "android",
+			IE = "ie",
+			CHROME = "chrome",
 			
 			ICON_PAGE_SINGLE = "css/icons/page1.gif";
 			ICON_PAGE_COMPARE = "css/icons/page2.gif";
@@ -498,7 +508,7 @@
 							aria_hidden:"true",
 							content:content,
 							footer:footer,
-							title:"{0_M_J_Loading_Dialog_Tile}",
+							title:"Loading Dialog Tile",
 							closeMode:false
 						});						
 					}
@@ -736,6 +746,25 @@
 			})(DVEleUtil);
 		    	
 		    	(function(u){
+		    		
+
+		    		u.Browser = CHROME;
+		    		u.System = PC;
+		    		function _CheckMobile(){
+		    			var sUserAgent = navigator.userAgent.toLowerCase();
+		    			if(sUserAgent.match(/ipad/i)==IPAD){
+							u.MobileSystem = IPAD;
+							u.System = MOBILE;
+		    			}else if(sUserAgent.match(/iphone os/i)==IPHONE){
+							u.MobileSystem = IPHONE;
+							u.System = MOBILE;
+		    			}else if(sUserAgent.match(/android/i)==ANDROID){
+							u.MobileSystem = ANDROID;
+							u.System = MOBILE;
+		    			}
+		    		}
+		    		_CheckMobile();
+
 		    		u.extend = function(subClass,superClass){
 		    			var F = function(){}
 		    			F.prototype = superClass.prototype;
@@ -754,6 +783,74 @@
 						}
 
 						return num;
+		    		}
+					
+					
+					
+					var statusResult;
+		    		u.getCurrentStatus = function(){
+		    			statusResult = {
+							"viewStatus":"",							
+							"pageStatus":{
+								"isDoublePageView":false,
+								"page1":1,
+								"page2":1
+							},
+							"compareStatus":{
+								"isTabView":false,
+								"page1":1,
+								"page2":1
+							},
+							"num":[0],
+
+						};
+		    			if(dv_brand==BRAND){
+							statusResult.viewStatus = DV_SINGLE;
+							statusResult.num = [0];
+							if(!DVPageNavigate.pageNav||DVPageNavigate.pageNav.getPanel().isSinglePreview() == true){
+								statusResult.pageStatus.isDoublePageView = false;
+								statusResult.pageStatus.page1 = statusResult.pageStatus.page2 = dv_page.page1;
+							}else if(DVPageNavigate.pageNav&&DVPageNavigate.pageNav.getPanel().isSinglePreview() == false){
+								statusResult.pageStatus.isDoublePageView = true;
+								statusResult.pageStatus.page1 = dv_page.page1;
+								statusResult.pageStatus.page2 = dv_page.page2;
+							}
+		    			}else if(dv_brand==BRAND_COMPARE){
+							statusResult.viewStatus = DV_COMPARE;
+							if(dv_current_num&&dv_current_num.length==1){
+								statusResult.compareStatus.isTabView = true;
+								if(dv_current_num[0]==1){
+									statusResult.num = [0];
+									if(!DVPageNavigate.pageNav||DVPageNavigate.pageNav.getPanel().isSinglePreview() == true){
+										statusResult.pageStatus.isDoublePageView = false;
+										statusResult.pageStatus.page1 = statusResult.pageStatus.page2 = dv_page1.page1;
+									}else if(DVPageNavigate.pageNav&&DVPageNavigate.pageNav.getPanel().isSinglePreview() == false){
+										statusResult.pageStatus.isDoublePageView = true;
+										statusResult.pageStatus.page1 = dv_page1.page1;
+										statusResult.pageStatus.page2 = dv_page1.page2;
+									}
+								}else if(dv_current_num[0]==2){
+									statusResult.num = [1];
+									if(!DVPageNavigate.pageNav||DVPageNavigate.pageNav.getPanel().isSinglePreview() == true){
+										statusResult.pageStatus.isDoublePageView = false;
+										statusResult.pageStatus.page1 = statusResult.pageStatus.page2 = dv_page2.page1;
+									}else if(DVPageNavigate.pageNav&&DVPageNavigate.pageNav.getPanel().isSinglePreview() == false){
+										statusResult.pageStatus.isDoublePageView = true;
+										statusResult.pageStatus.page1 = dv_page2.page1;
+										statusResult.pageStatus.page2 = dv_page2.page2;
+									}
+								}
+
+							}else if(dv_current_num&&dv_current_num.length==3){
+								statusResult.num = [0,1];
+								statusResult.compareStatus.isTabView = false;
+								statusResult.compareStatus.page1 = dv_page1.page1;
+								statusResult.compareStatus.page2 = dv_page2.page1;
+							}
+						}else if(dv_brand==BRAND_VIDEO){
+							statusResult.viewStatus = DV_VIDEO;
+						}
+						return statusResult;
 		    		}
 
 		    		u.log = function(message){
@@ -781,6 +878,46 @@
 						  e.stopPropagation();// 其它浏览器下阻止冒泡
 						}
 		    		}
+					
+				u.callURL = function(url,params){
+					var parameter = "";
+					if(this.chkObject(params)){
+						parameter = "?";
+						parameterArray = [];
+						for(var key in params){
+							parameterArray.push(key+"="+params[key]);							
+						}
+						parameter += parameterArray.join("&");
+					}
+					window.open(PUBLIC_CONFIGS.base_url+url+parameter);
+					DVUtil.log(["window.location",PUBLIC_CONFIGS.base_url+url+parameter]);
+				}
+				u.callAJAX = function(url,params,async,successfn,failfn){
+					var parameter = "";
+					if(this.chkObject(params)){
+						parameter = "?";
+						var parameterArray = [];
+						for(var key in params){
+							parameterArray.push(key+"="+params[key]);							
+						}
+						parameterArray.push("callNumber="+callNumber);
+						parameter += parameterArray.join("&");
+					}
+					jQuery.ajax({
+						type : "get",
+						async:async,
+						url : url+parameter,
+						success : function(data){
+							DVUtil.log(["AJAX CALL BACK  :  "+url+parameter,
+								data]);
+							successfn(data);
+						},
+						error:function(XMLHttpRequest, textStatus, errorThrown) {
+							failfn(errorThrown)
+							DVUtil.error("call '"+(url+parameter)+"' >> error:"+errorThrown);
+						}
+					});
+				}
 				u.callJSON = function(url,params,async,successfn,failfn){
 					var json,parameter,parameterArray,
 					callNumber = "JSON_"+Math.ceil(Math.random()*1000000000000),
@@ -924,7 +1061,6 @@
 						}
 						
 					}else{
-						// DVUtil.log(["async",async])
 						DVUtil.log("CALL URL  :  "+PUBLIC_CONFIGS.base_url+url+parameter);
 						
 
@@ -1136,7 +1272,7 @@
 						return context;
 					}
 
-					d.drawEllipse = function(context, x, y, a, b,color){
+					d.drawEllipse = function(context, x, y, a, b,color,num){
 						color = color?color:"#000000";
 					   var step = (a > b) ? 1 / a : 1 / b;
 					   context.beginPath();
@@ -1151,14 +1287,16 @@
 					   return context;
 					};
 
-					d.drawArrow = function(viewport,context,shape){
-						var shape_point = d.dvToViewportCor(shape.x,shape.y),
+					d.drawArrow = function(viewport,context,shape,rotation,num){
+						var shape_point = d.dvToViewportCor(shape.x,shape.y,num),
+						center = viewport.viewportToViewerElementCoordinates(viewport.getCenter(true)),
 	    				shape_point2 = DVDrawerUtil.dvToViewportCor(
 	    					Math.abs(parseFloat(shape.x)+parseFloat(shape.width*shape.scale)),
-	    					Math.abs(parseFloat(shape.y)+parseFloat(shape.height*shape.scale))
+	    					Math.abs(parseFloat(shape.y)+parseFloat(shape.height*shape.scale)),
+	    					num
 	    				),
-	    				shape_vpoint = viewport.imageToViewerElementCoordinates( shape_point ),
-	    				shape_vpoint2 = viewport.imageToViewerElementCoordinates( shape_point2 ),
+	    				shape_vpoint = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point )),
+	    				shape_vpoint2 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point2 )),
 	    				lX = parseFloat(shape.width*shape.scale),
 	    				lY = parseFloat(shape.height*shape.scale),
 	    				Par = 180,//10.0*shape.scale,
@@ -1168,14 +1306,16 @@
 	    				color = d.toColor(shape.color),
 	    				shape_point3 = DVDrawerUtil.dvToViewportCor(
 	    					Math.abs(parseFloat(shape.x)+parseFloat(lX + ( Par * cosy - ( Par / 2.0 * siny )))),
-	    					Math.abs(parseFloat(shape.y)+parseFloat(lY + ( Par * siny + ( Par / 2.0 * cosy ))))
+	    					Math.abs(parseFloat(shape.y)+parseFloat(lY + ( Par * siny + ( Par / 2.0 * cosy )))),
+	    					num
 	    				),
 	    				shape_point4 = DVDrawerUtil.dvToViewportCor(
 	    					Math.abs(parseFloat(shape.x)+parseFloat(lX + ( Par * cosy + Par / 2.0 * siny ))),
-	    					Math.abs(parseFloat(shape.y)+parseFloat(lY - ( Par / 2.0 * cosy - Par * siny )))
+	    					Math.abs(parseFloat(shape.y)+parseFloat(lY - ( Par / 2.0 * cosy - Par * siny ))),
+	    					num
 	    				),
-	    				shape_vpoint3 = viewport.imageToViewerElementCoordinates( shape_point3 ),
-	    				shape_vpoint4 = viewport.imageToViewerElementCoordinates( shape_point4 );
+	    				shape_vpoint3 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point3 )),
+	    				shape_vpoint4 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point4 ));
 
 	    				context.beginPath();
 	    				context.strokeStyle=color;
@@ -1193,10 +1333,11 @@
 						return context;
 					}
 
-					d.drawFreehand = function(viewport,context,shape){
-						var shape_point = d.dvToViewportCor(shape.x,shape.y),
+					d.drawFreehand = function(viewport,context,shape,rotation,num){
+						var shape_point = d.dvToViewportCor(shape.x,shape.y,num),
+						center = viewport.viewportToViewerElementCoordinates(viewport.getCenter(true)),
 						shapeData = shape.data,
-		    				shape_vpoint = viewport.imageToViewerElementCoordinates( shape_point ),
+		    				shape_vpoint = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point )),
 		    				color = d.toColor(shape.color),
 		    				index = 3;
 
@@ -1207,9 +1348,10 @@
 							if(index==i){
 								var shape_point3 = DVDrawerUtil.dvToViewportCor(
 			    					Math.abs(parseFloat(shape.x)+parseFloat(shapeData[i])),
-			    					Math.abs(parseFloat(shape.y)+parseFloat(shapeData[i+1]))
+			    					Math.abs(parseFloat(shape.y)+parseFloat(shapeData[i+1])),
+			    					num
 			    				),
-			    				shape_vpoint3 = viewport.imageToViewerElementCoordinates( shape_point3 );
+			    				shape_vpoint3 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point3 ));
 			    				context.lineTo(shape_vpoint3.x,shape_vpoint3.y);
 							}
 							if(shapeData[i]=="L"||shapeData[i]=="M"){
@@ -1231,6 +1373,31 @@
 						// context.fill();
 						return context;
 					}
+					d.getRotationCor = function(rotation,center,point){
+						var lX = 0,
+						lY = 0,
+						x = point.x,
+						y = point.y;
+						switch(rotation){
+	    			 			case 180:
+	    			 				lX = x-(x-center.x)*2;
+									lY = y-(y-center.y)*2;
+								break;
+								case 270:
+									lX = x+(y-center.y)-(x-center.x);
+									lY = y-(x-center.x)-(y-center.y);
+								break;
+								case 90:
+									lX = x-(y-center.y)-(x-center.x);
+									lY = y+(x-center.x)-(y-center.y);
+								break;
+								default:
+									lX = x;
+									lY = y;
+								break;
+	    			 		}
+	    			 	return {"x":lX,"y":lY};
+					}
 					d.toColor = function(color){
 						var color_result = parseInt(color).toString(16);
 						if(3381759==parseInt(color)){
@@ -1242,18 +1409,22 @@
 						return "#"+color_result;
 					}
 
-					d.dvToViewportCor = function(x,y){
-    			 		var hwobj = d.getDVHW(),vx,vy;
+					d.dvToViewportCor = function(x,y,num){
+    			 		var hwobj = d.getDVHW(num),vx,vy;
     			 		vx = x * (hwobj.oh/hwobj.h);
 			 			vy = y * (hwobj.ow/hwobj.w);
-			 			// u.log(hwobj);
 			 			return {"x":vx,"y":vy};
     			 	}
-    			 	d.dvToImageCor = function(x,y){
+    			 	d.getCenterViewportCor = function(x,y,num){
+    			 		var hwobj = d.getDVHW(num),vx,vy;
+    			 		vx = hwobj.ow/2;
+			 			vy = hwobj.oh/2;
+			 			return {"x":vx,"y":vy};
+    			 	}
+    			 	d.dvToImageCor = function(x,y,num){
     			 		var hwobj = d.getDVHW(),vx,vy;
     			 		vx = x * (hwobj.h/hwobj.oh);
 			 			vy = y * (hwobj.w/hwobj.ow);
-			 			// u.log(hwobj);
 			 			return {"x":vx,"y":vy};
     			 	}
     			 	d.getDVHW = function(num){
@@ -1394,7 +1565,7 @@
 		    			}
 
 		    			this.draw = function(){
-		    				_clearAnnos();
+// 		    				_clearAnnos();
 		    			 	for(var i=0;i<_annotationList.length;i++){
 		    			 		_annotationList[i].draw();
 		    			 	}		    			 	
@@ -1482,7 +1653,7 @@
 	    			 	_context = _drawer.context,
 	    			 	_viewport = _viewer.viewport,
 	    			 	_anno = anno,
-	    			 	_anno_bg_color = "#F2FAA7",
+	    			 	_anno_bg_color = "rgba(234, 236, 223,0.7)",
 	    			 	_anno_border_color = "#EAECDF",
 	    			 	_anno_font_color = "#000000",
 	    			 	_anno_font_size = "10pt",
@@ -1498,6 +1669,7 @@
 	    			 	_dvCanvas,_page,
 	    			 	anno_drawer,
 	    			 	_num;
+	    			 	this.rotation = 0;
 	    			 	this.annoShapeImagedata = null;
 	    			 	
 	    			 	
@@ -1526,6 +1698,11 @@
 	    			 		return _acid;
 	    			 	}
 		    			this.draw = function(){
+		    				var s = DVUtil.getCurrentStatus(),
+	    			 		ratateBtn = DVToolbar.Toolbar.getDVRotate(),
+	    			 		lX = 0,
+	    			 		lY = 0;
+	    			 		_that.rotation = ratateBtn.getRotation();
 		    				if(viewer==dv_viewer){
 								anno_drawer = dv_annos_drawer;
 							}else if(viewer==dv_viewer1){
@@ -1536,43 +1713,44 @@
 								anno_drawer = dv_annos_drawer_page;
 							}
 
+
 		    				//clear annotations in canvas
-		    				// DVUtil.log("dv_page.page1="+dv_page+" anno.page="+anno.page);
-		    				DVUtil.log(["dv_page.page1",dv_page,"anno.page",anno.page]);
 		    				if(_viewer==dv_viewer){
 		    					_dvCanvas = dv_jq_canvas;
-		    					_num = 0;
+		    					_that.num = 0;
 		    					if(parseInt(dv_page.page1)!=parseInt(anno.page)){
 		    						return;
 		    					}		    					
 		    				}else if(_viewer==dv_viewer1){
 		    					_dvCanvas = dv_jq_canvas1;
-		    					_num = 0;
+		    					_that.num = 0;
 		    					if(parseInt(dv_page1.page1)!=parseInt(anno.page)){
 		    						return;
 		    					}
 		    				}else if(_viewer==dv_viewer2){
 		    					_dvCanvas = dv_jq_canvas2;
-		    					_num = 1;
+		    					_that.num = 1;
 		    					if(parseInt(dv_page2.page1)!=parseInt(anno.page)){
 		    						return;
 		    					}
-		    				}else if(_viewer==dv_viewer_page){
+		    				}else if(_viewer==dv_viewer_page){		 
 		    					_dvCanvas = dv_jq_canvas_page;
-		    					_num = DVUtil.getNum();
-		    					var _relativeViewer = _viewer.relativeViewer;
-		    					if(_relativeViewer==dv_viewer){
+		    					_that.num = s.num[0];
+		    					if(s.viewStatus==DV_SINGLE){
 			    					if(parseInt(dv_page.page2)!=parseInt(anno.page)){
 			    						return;
 			    					}		    					
-			    				}else if(_relativeViewer==dv_viewer1){
-			    					if(parseInt(dv_page1.page2)!=parseInt(anno.page)){
-			    						return;
+			    				}else if(s.viewStatus==DV_COMPARE){
+			    					if(_that.num==0){
+			    						if(parseInt(dv_page1.page2)!=parseInt(anno.page)){
+											return;
+										}
+			    					}else if(_that.num==1){
+			    						if(parseInt(dv_page2.page2)!=parseInt(anno.page)){
+											return;
+										}
 			    					}
-			    				}else if(_relativeViewer==dv_viewer2){
-			    					if(parseInt(dv_page2.page2)!=parseInt(anno.page)){
-			    						return;
-			    					}
+			    					
 			    				}
 		    				}
 
@@ -1582,35 +1760,70 @@
 		    			}
 
 		    			this.drawAnno = function(){
-		    				var point = DVDrawerUtil.dvToViewportCor(_anno.sceneX,_anno.sceneY),
+		    				var s = DVUtil.getCurrentStatus(),
+		    				point = DVDrawerUtil.dvToViewportCor(_anno.sceneX,_anno.sceneY,_that.num),
 	    			 		opoint = new OpenSeadragon.Point(point.x,point.y),
-					        vpoint = _vpoint = _viewport.imageToViewerElementCoordinates( opoint ),	    			 		
+					        vpoint = _vpoint = _viewport.imageToViewerElementCoordinates( opoint ),	
 	    			 		text = _context.measureText(_anno.progressiveId);
-	    			 		
+	    			 		lX = 0;
+	    			 		lY = 0;
+	    			 		switch(_that.rotation){
+	    			 			case 180:
+	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+	    			 				lX = _vpoint.x-(_vpoint.x-center.x)*2;
+									lY = _vpoint.y-(_vpoint.y-center.y)*2;
+								break;
+								case 270:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = _vpoint.x+(_vpoint.y-center.y)-(_vpoint.x-center.x);
+									lY = _vpoint.y-(_vpoint.x-center.x)-(_vpoint.y-center.y);
+								break;
+								case 90:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = _vpoint.x-(_vpoint.y-center.y)-(_vpoint.x-center.x);
+									lY = _vpoint.y+(_vpoint.x-center.x)-(_vpoint.y-center.y);
+								break;
+								default:
+									lX = _vpoint.x;
+									lY = _vpoint.y;
+								break;
+	    			 		}
 		    			 	
 
 
 		    			 	if(!_jq_anno){
 		    					_jq_anno = eu.div("dv-annotation")
 		    					_dvCanvas.append(_jq_anno);
-		    					_jq_anno.bind("click",{},_jqAnnoClickEvent)
+		    					_jq_anno.bind("click",{},_jqAnnoClickEvent);
 		    				}
 		    				_jq_anno.css({
 		    					"background-color":_anno_bg_color,
 		    					"border":"1px solid "+_anno_border_color,
-		    					"left":_vpoint.x-10+"px",
-		    					"top":_vpoint.y-12+"px",
-		    					"opacity":0.7
+		    					"left":lX-10+"px",
+		    					"top":lY-12+"px"
 		    				}).text(_anno.progressiveId);
-		    				DVUtil.log(["_num",_num,"_dvCanvas",_dvCanvas]);
+
 		    			}
 
 		    			this.createAnnoElement = function(){
 		    				if(!_jq_anno_view){
 		    					_jq_anno_view = eu.div("dv-annotation-view");
-		    					_jq_anno_save = eu.img("dv-annotation-view-btn",{"src":ICON_ACCEPT});
-		    					_jq_anno_cancel = eu.img("dv-annotation-view-btn",{"src":ICON_DELETE});
-		    					_jq_anno_text = eu.textarea("dv-annotation-text");
+		    					_jq_anno_view.css({"background-color":_anno_bg_color});
+		    					
+		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok",null,{
+		    						"font-size":"20px",
+		    						"cursor":"pointer",
+		    						"width":"22px",
+		    						"color":"#648FDA"
+		    					});
+		    					_jq_anno_cancel = eu.span("glyphicon glyphicon-remove",null,{
+		    						"font-size":"20px",
+		    						"cursor":"pointer",
+		    						"width":"22px",
+		    						"color":"#FF3A3A",
+		    						"margin":"0 20px"
+		    					});
+		    					_jq_anno_text = eu.textarea("dv-annotation-text form-control");
 
 		    					var jq_anno_left_layout = eu.div("dv-annotation-view-layout-left"),
 		    					jq_anno_right_layout = eu.div("dv-annotation-view-layout-right"),
@@ -1634,13 +1847,12 @@
 		    				_jq_anno_text.val(decodeString(_anno.content));
 		    				
 		    				_jq_anno_view.css({
-		    					"left":_vpoint.x+"px",
-		    					"top":_vpoint.y+"px"
+		    					"left":lX+"px",
+		    					"top":lY+"px"
 		    				});
 
 		    				if(_anno.progressiveId=="new"){
 		    					
-		    					_jq_anno_cancel.attr({"src":ICON_CLOSE})
 		    					_that.open();
 		    				}
 		    			}
@@ -1809,24 +2021,55 @@
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
-		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y),
+		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y,_that.num),
 		    				shape_point2 = DVDrawerUtil.dvToViewportCor(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale),
 		    					parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)),
 		    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
 		    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
 		    				color = DVDrawerUtil.toColor(_shape.color),
 		    				startX = shape_vpoint.x>shape_vpoint2.x?shape_vpoint2.x:shape_vpoint.x,
-		    				startY = shape_vpoint.y>shape_vpoint2.y?shape_vpoint2.y:shape_vpoint.y;
+		    				startY = shape_vpoint.y>shape_vpoint2.y?shape_vpoint2.y:shape_vpoint.y,
+		    				lX = 0,
+		    				lY = 0,
+		    				lW = 0,
+		    				lH = 0;
 		    				
-
-		    				DVDrawerUtil.drawRect(_context,startX,
-		    					startY,
-		    					Math.abs(shape_vpoint.x-shape_vpoint2.x),
-		    					Math.abs(shape_vpoint.y-shape_vpoint2.y),
-		    					color);
+		    				switch(_that.rotation){
+	    			 			case 180:
+	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+	    			 				lX = startX-(startX-center.x)*2;
+									lY = startY-(startY-center.y)*2;
+									lW = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
+									lH = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
+								break;
+								case 270:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = startX+(startY-center.y)-(startX-center.x);
+									lY = startY-(startX-center.x)-(startY-center.y);
+									lW = Math.abs(shape_vpoint.y-shape_vpoint2.y);
+									lH = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
+								break;
+								case 90:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = startX-(startY-center.y)-(startX-center.x);
+									lY = startY+(startX-center.x)-(startY-center.y);
+									lW = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
+									lH = Math.abs(shape_vpoint.x-shape_vpoint2.x);
+								break;
+								default:
+									lX = startX;
+									lY = startY;
+									lW = Math.abs(shape_vpoint.x-shape_vpoint2.x);
+									lH = Math.abs(shape_vpoint.y-shape_vpoint2.y);
+								break;
+	    			 		}
+							
+		    				DVDrawerUtil.drawRect(_context,lX,
+		    					lY,
+		    					lW,
+		    					lH,
+		    					color,_that.num);
 		    				
-		    				// 
-		    				// DVUtil.log(color);
 		    			}
 		    		}
 
@@ -1843,20 +2086,51 @@
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
-		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y),
-		    				shape_point2 = DVDrawerUtil.dvToViewportCor(Math.abs(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale)/2),
+		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y,_that.num),
+		    				shape_point2 = DVDrawerUtil.dvToViewportCor(Math.abs(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale)/2,_that.num),
 		    					Math.abs(parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)/2)),
 		    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
 		    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
 		    				color = DVDrawerUtil.toColor(_shape.color),
 		    				ch = Math.abs(shape_vpoint.y-shape_vpoint2.y),
-		    				cw = Math.abs(shape_vpoint.x-shape_vpoint2.x);
+		    				cw = Math.abs(shape_vpoint.x-shape_vpoint2.x),
+		    				lX = 0,
+		    				lY = 0,
+		    				lW = 0,
+		    				lH = 0;;
+							switch(_that.rotation){
+	    			 			case 180:
+	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+	    			 				lX = shape_vpoint2.x-(shape_vpoint2.x-center.x)*2;
+									lY = shape_vpoint2.y-(shape_vpoint2.y-center.y)*2;
+									lW = cw;
+									lH = ch;
+								break;
+								case 270:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = shape_vpoint2.x+(shape_vpoint2.y-center.y)-(shape_vpoint2.x-center.x);
+									lY = shape_vpoint2.y-(shape_vpoint2.x-center.x)-(shape_vpoint2.y-center.y);
+									lW = ch;
+									lH = -1*cw;
+								break;
+								case 90:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lX = shape_vpoint2.x-(shape_vpoint2.y-center.y)-(shape_vpoint2.x-center.x);
+									lY = shape_vpoint2.y+(shape_vpoint2.x-center.x)-(shape_vpoint2.y-center.y);
+									lW = -1*ch;
+									lH = cw;
+								break;
+								default:
+									lX = shape_vpoint2.x;
+									lY = shape_vpoint2.y;
+									lW = cw;
+									lH = ch;
+								break;
+	    			 		}
+		    				
+		    				DVDrawerUtil.drawEllipse(_context,lX,lY,lW,lH,color,_that.num);
 
-		    				// DVDrawerUtil.drawRect(_context,shape_vpoint.x,shape_vpoint.y,100,100,color);
-		    				DVDrawerUtil.drawEllipse(_context,shape_vpoint2.x,shape_vpoint2.y,cw,ch,color);
-
-		    				/*DVUtil.log(shape_vpoint);
-		    				DVUtil.log(shape_vwh);*/
+		    				
 		    			}
 
 
@@ -1875,10 +2149,11 @@
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
-		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y),
+		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y,_that.num),
 		    				shape_point2 = DVDrawerUtil.dvToViewportCor(
 		    					Math.abs(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale)),
-		    					Math.abs(parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale))
+		    					Math.abs(parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)),
+		    					_that.num
 		    					),
 		    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
 		    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
@@ -1893,10 +2168,11 @@
 		    				color = DVDrawerUtil.toColor(_shape.color),
 		    				shape_point3 = DVDrawerUtil.dvToViewportCor(
 		    					Math.abs(parseFloat(_shape.x)+parseFloat(lX)),
-		    					Math.abs(parseFloat(_shape.y)+parseFloat(lY))
+		    					Math.abs(parseFloat(_shape.y)+parseFloat(lY)),
+		    					_that.num
 		    				);
 		    				
-		    				DVDrawerUtil.drawFreehand(_viewport,_context,_shape);
+		    				DVDrawerUtil.drawFreehand(_viewport,_context,_shape,_that.rotation,_that.num);
 
 		    			}
 
@@ -1917,7 +2193,7 @@
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();		    				
 		    				
-		    				DVDrawerUtil.drawArrow(_viewport,_context,_shape);
+		    				DVDrawerUtil.drawArrow(_viewport,_context,_shape,_that.rotation,_that.num);
 
 		    			}
 		    		}
@@ -1959,19 +2235,19 @@
 		    				_liAnnotation = eu.li("active",{"role":"presentation"})
 		    								.append(
 		    									eu.a(null,{"href":"#annoTab","role":"tab","data-toggle":"tab"})
-		    									.text("{0_M_J_Annotaion}")
+		    									.text("Annotaions")
 		    								);
 		    								
 		    				_liApproval = eu.li("",{"role":"presentation"})
 		    								.append(
 		    									eu.a(null,{"href":"#appTab","role":"tab","data-toggle":"tab"})
-		    									.text("{0_M_J_Approval}")
+		    									.text("Approvals")
 		    								);
 
 		    				_liChecklist = eu.li("",{"role":"presentation"})
 		    								.append(
 		    									eu.a(null,{"href":"#chklistTab","role":"tab","data-toggle":"tab"})
-		    									.text("{0_M_J_Checklist}")
+		    									.text("Checklist")
 		    								);
 
 		    				_ul.append(_liAnnotation).append(_liApproval).append(_liChecklist);
@@ -2168,7 +2444,7 @@
 		    			_listWidth = _dvMain_layout.width()*0.2 > 400 ? _dvMain_layout.width()*0.2 : 400 ,	
 		    			_sort = true ,_sortIndex = -1 ,_isCompTop = isCompTop;
 
-		    			this.sortDate = function(sortIndex,sort){
+		    			this.sortDate = function(sortIndex,sort,isNumber){
 		    				_sortIndex = sortIndex ;
 		    				_sort = sort ;
 		    				var trs = _that.getTbody().find("tr");
@@ -2180,7 +2456,12 @@
 	    						rowArr.sort(function(row1,row2){
 	    							var value1 = row1.find("td").eq(sortIndex).text();
 	    							var value2 = row2.find("td").eq(sortIndex).text();
-	    							return _compare(value1, value2);
+	    							if(isNumber){
+	    								return _compareNum(value1, value2);
+	    							}else{
+	    								return _compare(value1, value2);
+	    							}
+	    							
 	    						})
 	    					}else{
 	    						rowArr.reverse();
@@ -2190,8 +2471,24 @@
 		    					_that.getTbody().append(rowArr[i]);
 		    				}
 		    			}
-		    			
-		    			 //ㄤsort姣旇瀛楃涓
+		    			function _compareNum(num1,num2){
+		    				num1 = num1?parseInt(num1):0;
+		    				num2 = num2?parseInt(num2):0;
+		    				if(num1==0){
+		    					return -1;
+		    				}
+		    				if(num2==0){
+		    					return 1;
+		    				}
+		    				if (num1 < num2) {
+			    				return -1;
+			    			} else if (num1 > num2) {
+			    				return 1;
+			    			} 
+		    			}
+		    			/*
+					* 对比单个数据并进行排序
+					*/
 		    			function _compare(str1, str2) {
 		    				if(str1 == null || str1.length == 0){
 		    					return -1 ;
@@ -2211,34 +2508,34 @@
 		    			};
 		    			
 		    			this.createElement = function(){
-		    				// dv_annotations叡傛暟峰annotation list data
+		    				// dv_annotations annotation list data
 		    				_fileName = eu.div("fileName")
 		    				_table = eu.table("table table-bordered table-hover table-striped",null,{"background-color":"#FFFFFF"});
 		    				_thead = eu.thead();
 		    				_tbody = eu.tbody();
 		    				_thead.append(
 		    					eu.tr().append(
-		    						eu.th().append(eu.div().width(_listWidth*0.2).append("{0_M_J_ID}")).css({"padding":"0px"}).click(function(){
+		    						eu.th().append(eu.div().width(_listWidth*0.2).append("ID")).css({"padding":"0px"}).click(function(){
 		    							var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
 		    							if(_that.getSortIndex() == sortIndex){
 		    								if(sort != true){
 		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true);
+		    									_that.sortDate(sortIndex,true,true);
 		    								}else{
 		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false);
+		    									_that.sortDate(sortIndex,false,true);
 		    								}
 		    							}else{
 		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true);
+		    								_that.sortDate(sortIndex,true,true);
 		    							}
 		    						})	
 			    				).append(
 			    					eu.th().append(eu.div().width(_listWidth*0.1).html("&nbsp;")).css({"padding":"0px"})	
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.1).text("{0_M_J_Page}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.1).text("Pg")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2256,7 +2553,7 @@
 		    							}
 		    						})	
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Firstname}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("First Name")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2274,7 +2571,7 @@
 		    							}
 		    						})		
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Lastname}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Last Name")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2292,7 +2589,7 @@
 		    							}
 		    						})	
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Content}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Content")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2429,7 +2726,7 @@
 		    				_tbody = eu.tbody();
 		    				_thead.append(
 		    					eu.tr().append(
-		    						eu.th().append(eu.div().width(_listWidth*0.2).append("{0_M_J_Approval_Date}")).css({"padding":"0px"}).click(function(){
+		    						eu.th().append(eu.div().width(_listWidth*0.2).append("Date")).css({"padding":"0px"}).click(function(){
 		    							var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2447,7 +2744,7 @@
 		    							}
 		    						})	
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.1).text("{0_M_J_Approval_Type}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.1).text("Type")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2465,7 +2762,7 @@
 		    							}
 		    						})	
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Firstname}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("First Name")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2483,7 +2780,7 @@
 		    							}
 		    						})		
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Lastname}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Last Name")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2501,7 +2798,7 @@
 		    							}
 		    						})
 			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("{0_M_J_Approval_Comment}")).css({"padding":"0px"}).click(function(){
+			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Comment")).css({"padding":"0px"}).click(function(){
 			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
 		    							$(this).parent().find("span").remove();
 		    							var sort = _that.getSort() ;
@@ -2659,6 +2956,7 @@
 			    			_DVToolAnnoClass,
 			    			_DVMeasureClass,
 			    			_DVDensitometerClass,
+			    			_DVDVPreferenceClass,
 			    			_DVPrintClass,
 			    			_DVRotateClass,
 			    			_DVApprovalClass,
@@ -2692,8 +2990,8 @@
 		    					_toolbarBtnlist.push(_DVZoomClass);
 
 		    					if(dv_brand==BRAND){
-		    						_DVZoom100Class = new DVZoom100Class();
-		    						_toolbarBtnlist.push(_DVZoom100Class);
+		    						//_DVZoom100Class = new DVZoom100Class();
+		    						//_toolbarBtnlist.push(_DVZoom100Class);
 		    					}
 		    					
 		    				}
@@ -2727,6 +3025,10 @@
 		    					_DVDensitometerClass = new DVDensitometerClass()
 		    					_toolbarBtnlist.push(_DVDensitometerClass);
 		    				}
+		    				
+		    				_DVDVPreferenceClass = new DVPreferenceClass()
+	    					_toolbarBtnlist.push(_DVDVPreferenceClass);
+		    				
 
 		    				if(DVUtil.chkAction("Print")){
 		    					_DVPrintClass = new DVPrintClass()
@@ -2778,7 +3080,7 @@
 		    			this.updLayout = function(){
 		    				var w = _dvToolbar.width(),
 		    				bw = _navbar_header_div.width()+20,
-		    				vw = _navbar_nav_version.width()+30,
+		    				vw = _navbar_nav_version.width()+50,
 		    				btn_len = _toolbarBtnlist.length,
 		    				w1 = w - bw - vw,
 		    				fit_w_eles = _dvToolbar.find("li[fit-width=true]"),
@@ -2849,6 +3151,9 @@
 
 		    			this.getDVBack = function(){
 		    				return _DVBackClass;
+		    			}
+		    			this.getDVPreferenceClass = function(){
+		    				return _DVDVPreferenceClass;
 		    			}
 
 		    			this.getDVSeparate = function(){
@@ -3002,7 +3307,7 @@
 			    				_pageNav.showSinglePanel(1);
 			    			}else{
 			    				_that.btnICON = ICON_COMPARE_TAB;
-			    				_element.attr({"fit-width":"false"}).css({"width":"{0_M_J_Dialog_Auto}"});
+			    				_element.attr({"fit-width":"false"}).css({"width":"auto"});
 
 			    				_compare1.show();
 			    				_compare2.show();
@@ -3045,7 +3350,6 @@
 			    			function _toolBtnImgClickEvent(e){
 			    				// _element.append("aaa");
 			    				// _element.remove()
-			    				DVUtil.log("compare");
 			    				_compareView = !_compareView;
 			    				_drawElement(_element);
 			    				// _that.initEvents();
@@ -3070,7 +3374,6 @@
 			    				dv_current_num = [1];
 			    				_pageNav.showSinglePanel(1);
 			    				(dv_viewer1.viewport&&_bounds)?dv_viewer1.viewport.fitBounds(_bounds,true):null;
-			    				DVUtil.log("radio 1");
 			    				DVAnnotation.update();
 			    			}
 			    			function _radioBtn2ClickEvent(e){
@@ -3081,7 +3384,6 @@
 			    				dv_current_num = [2];
 			    				_pageNav.showSinglePanel(2);
 			    				(dv_viewer2.viewport&&_bounds)?dv_viewer2.viewport.fitBounds(_bounds,true):null;
-			    				DVUtil.log("radio 2");
 			    				DVAnnotation.update();
 			    			}
 			    			function _radioBtn3ClickEvent(e){
@@ -3176,10 +3478,19 @@
 
 			    		function _openView(){
 			    			var bean = _selBean,
-			    				_url,_url_comp;
-			    			if(dv_brand==BRAND){		    					
+			    				_url,_url_comp,
+			    				s = DVUtil.getCurrentStatus();
+
+			    			if(s.viewStatus==DV_SINGLE){		    					
 		    					dv_canvas.openViewer();
-		    				}else{
+		    					if(s.pageStatus.isDoublePageView){
+		    						dv_canvas_page.openViewer();
+		    					}
+		    					
+		    				}else if(s.viewStatus==DV_COMPARE){
+		    					if(s.compareStatus.isTabView&&s.pageStatus.isDoublePageView){
+									dv_canvas_page.openViewer();
+			    				}
 		    					dv_canvas_compare.openViewer1();
 		    					dv_canvas_compare.openViewer2();
 		    					dv_canvas_compare.resetCanvasURL();
@@ -3191,25 +3502,45 @@
 			    		DVToolBtnClass.prototype.constructor.call(this);
 			    		var _that = this;
 			    		this.btnICON = ICON_ROTATE,
-			    		ROTATION = 90;
+			    		ROTATION = 90,_rotation = 0;
 			    		function _clickEvent(e){
-			    			
-			    			/*if(dv_brand==BRAND){
-			    				var _viewport = dv_viewer.viewport,
-			    				_rotation = _viewport.getRotation();
-			    				dv_viewer.viewport.setRotation(_rotation+ROTATION);
-			    				dv_viewer_page.viewport?dv_viewer_page.viewport.setRotation(_rotation+ROTATION):"";
+			    			var s = DVUtil.getCurrentStatus();
+		    				
+			    			if(dv_brand==BRAND){
+			    				var _viewport = dv_viewer.viewport;
+			    				_rotation = _viewport.getRotation()+ROTATION;
+			    				
+			    				if(dv_viewer&&dv_viewer.viewport){
+			    					dv_viewer.viewport.setRotation(_rotation);
+			    					dv_annos_drawer?dv_annos_drawer.draw():null;
+			    				}
+			    				if(dv_viewer_page&&dv_viewer_page.viewport){
+			    					dv_viewer_page.viewport.setRotation(_rotation);
+			    					dv_annos_drawer_page?dv_annos_drawer_page.draw():null;
+			    				}
 			    			}else if(dv_brand==BRAND_COMPARE){
-			    				var _viewport1 = dv_viewer1.viewport,
-			    				_rotation1 = _viewport1.getRotation(),
-			    				_viewport2 = dv_viewer2.viewport,
-			    				_rotation2 = _viewport2.getRotation();
+			    				var _viewport = (dv_viewer1&&dv_viewer1.viewport)?dv_viewer1.viewport:dv_viewer2.viewport;
+			    				_rotation = _viewport.getRotation()+ROTATION;
+			    				/*_viewport2 = dv_viewer2.viewport,
+			    				_rotation2 = _viewport2.getRotation();*/
+								
+								if(dv_viewer1&&dv_viewer1.viewport){
+			    					dv_viewer1.viewport.setRotation(_rotation);
+			    					dv_annos_drawer1?dv_annos_drawer1.draw():null;
+			    				}
+			    				if(dv_viewer2&&dv_viewer2.viewport){
+			    					dv_viewer2.viewport.setRotation(_rotation);
+			    					dv_annos_drawer2?dv_annos_drawer2.draw():null;
+			    				}
+			    				if(dv_viewer_page&&dv_viewer_page.viewport){
+			    					dv_viewer_page.viewport.setRotation(_rotation);
+			    					dv_annos_drawer_page?dv_annos_drawer_page.draw():null;
+			    				}			    				
+			    			}
+			    		}
 
-			    				dv_viewer1.viewport.setRotation(_rotation1+ROTATION);
-			    				dv_viewer2.viewport.setRotation(_rotation2+ROTATION);
-			    				dv_viewer_page.viewport.setRotation(_rotation+ROTATION);
-			    			}*/
-
+			    		this.getRotation = function(){
+			    			return _rotation;
 			    		}
 
 			    		this.initEvents = function(){
@@ -3250,7 +3581,7 @@
 			    		var _that = this;
 			    		_that.isActive = false;
 			    		this.btnICON = ICON_ZOOM100;
-			    		function _clickEvent(e){
+			    		/*function _clickEvent(e){
 			    			_that.isActive = !_that.isActive;
 			    			if(_that.isActive){
 			    				var ow,oh,w,h,
@@ -3293,7 +3624,7 @@
 
 			    		this.initEvents = function(){
 			    			_that.getElement().bind("click",{},_clickEvent)
-			    		}
+			    		}*/
 		    		}
 			    	
 			    	DVFitWinClass = function(){
@@ -3301,10 +3632,16 @@
 			    		var _that = this;
 			    		this.btnICON = ICON_FITTO_WINDOW;
 			    		function _clickEvent(e){
-			    			
-			    			if(dv_brand==BRAND){
+			    			var s = DVUtil.getCurrentStatus();
+			    			if(s.viewStatus==DV_SINGLE){
+			    				if(s.pageStatus.isDoublePageView){
+									dv_viewer_page.viewport.goHome();
+			    				}
 			    				dv_viewer.viewport.goHome();
-			    			}else if(dv_brand==BRAND_COMPARE){
+			    			}else if(s.viewStatus==DV_COMPARE){
+			    				if(s.compareStatus.isTabView&&s.pageStatus.isDoublePageView){
+									dv_viewer_page.viewport.goHome();
+			    				}
 			    				dv_viewer1.viewport.goHome();
 			    				dv_viewer2.viewport.goHome();
 			    			}
@@ -3343,30 +3680,33 @@
 			    		this.btnICON = ICON_TOGGLEANNO,
 			    		_isshow = false;
 			    		function _clickEvent(e){
-			    			var annolist = [];
-			    			if(dv_brand==BRAND){
+			    			var annolist = [],
+			    			annolist2 = [],
+			    			s = DVUtil.getCurrentStatus();
+			    			if(s.viewStatus==DV_SINGLE){
 			    				annolist = dv_annotations;
+
 			    			}else if(dv_brand==BRAND_COMPARE){
-							if(dv_current_num.length==1){
-								if(dv_current_num[0]==1){
-									annolist = dv_annotations1;
-								}else if(dv_current_num[0]==2){
-									annolist = dv_annotations2;
+								if(dv_current_num.length==1){
+									if(dv_current_num[0]==1){
+										annolist = dv_annotations1;
+									}else if(dv_current_num[0]==2){
+										annolist = dv_annotations2;
+									}
+								}else{
+									annolist = $.merge( dv_annotations1, dv_annotations2 );
 								}
-							}else{
-								annolist = $.merge( dv_annotations1, dv_annotations2 );
 							}
-						}
 
 			    			if(_isshow){
-							for(var i=0;i<annolist.length;i++){
-								dv_anno_class_list[annolist[i].acid].close();
-							}
+								for(var i=0;i<annolist.length;i++){
+									dv_anno_class_list[annolist[i].acid].close();
+								}
 			    			}else{
 
-							for(var i=0;i<annolist.length;i++){
-								dv_anno_class_list[annolist[i].acid].open();
-							}
+								for(var i=0;i<annolist.length;i++){
+									dv_anno_class_list[annolist[i].acid].open();
+								}
 			    			}
 			    			_isshow = !_isshow;
 
@@ -3468,7 +3808,6 @@
 
 			    		function _dropdownClickEvent(e){
 			    			
-			    			DVUtil.log("Annotation Click Event.");
 			    			_that.isActive = !_that.isActive;
 			    			if(_that.isActive||_selFromDropdown){
 			    				// DVToolbar.Toolbar.removeAllBtnsActiveExcept(_that);
@@ -3476,7 +3815,6 @@
 			    				_dropdownValBtn.addClass("active");
 			    				_selFromDropdown = false;
 			    				dv_toolbar_action = _selectedAnno;
-			    				DVUtil.log(dv_toolbar_action);
 			    				switch(_selectedAnno){
 			    					case TOOL_ANNO:
 			    						
@@ -3502,7 +3840,6 @@
 
 			    		function _normalAnnoClickEvent(e){
 			    			
-			    			DVUtil.log("Normal Annotation Click Event.");
 			    			_dropdownValBtn.html(eu.img(null,{"src":ICON_ANNOTATION}));
 			    			_selFromDropdown = true;
 			    			_selectedAnno = TOOL_ANNO;
@@ -3510,7 +3847,6 @@
 
 			    		function _circleAnnoClickEvent(e){
 			    			
-			    			DVUtil.log("Circle Annotation Click Event.");
 			    			_dropdownValBtn.html(eu.img(null,{"src":ICON_CIRCLE}));
 			    			_selFromDropdown = true;
 			    			_selectedAnno = TOOL_ANNO_ECLIPSE;
@@ -3518,7 +3854,6 @@
 
 			    		function _squareAnnoClickEvent(e){
 			    			
-			    			DVUtil.log("Square Annotation Click Event.");
 			    			_dropdownValBtn.html(eu.img(null,{"src":ICON_RECTANGLE}));
 			    			_selFromDropdown = true;
 			    			_selectedAnno = TOOL_ANNO_RECT;
@@ -3526,7 +3861,6 @@
 
 			    		function _freedhandAnnoClickEvent(e){
 			    			
-			    			DVUtil.log("Freehand Annotation Click Event.");
 			    			_dropdownValBtn.html(eu.img(null,{"src":ICON_FREEHAND}));
 			    			_selFromDropdown = true;
 			    			_selectedAnno = TOOL_ANNO_FREEHAND;
@@ -3534,7 +3868,6 @@
 
 			    		function _arrowAnnoClickEvent(e){
 			    			
-			    			DVUtil.log("Arrow Annotation Click Event.");
 			    			_dropdownValBtn.html(eu.img(null,{"src":ICON_ARROW}));
 			    			_selFromDropdown = true;
 			    			_selectedAnno = TOOL_ANNO_ARROW;
@@ -3680,139 +4013,258 @@
 			    		}
 			    		
 			    		function _clickEvent(e){
-			    			var dialog,jq_content = eu.div("dvPreference"),jq_footer = eu.div();dialog = eu.openDialog("preference",jq_content,jq_footer)
-			    			var measurement_units_mm,measurementUnits_inches,show_points,annotation_color,draw_color,open_annotation,atCursorHover,zoom_enable,def_anno_font_size,
-			    			def_anno_tab_show,disable_spell_check,spell_check_type,compare_view,disable_sync_pages_check,disable_anno_hover_popup,sens_value;
-			    			
-			    			function _saveBtnClickEvent(e){
-			    				$(this).attr("disabled","true");
-//error:For input string: "English"			    				
-var	action = "w";		    				
-var disable_anno_hover_popup = 0;			    				
-var sens_value = 0 ;			    				
-var user_id = "" ;
-var measurement_units = measurementUnits_inches.is(':checked') ? 1 : 0 ;
-var annotation_color = "";
-var draw_color = "" ;
-var compare_view = null;
-var user_first_name = "";
-			    				DVUtil.callJSON("userpreference.davinci",{
-			    					"sessionid":PUBLIC_CONFIGS.session_id,"dataType":DATA_TYPE,"action":action,
-			    					"disable_anno_hover_popup":disable_anno_hover_popup,"sens_value":sens_value,"user_id":user_id,
-			    					"measurement_units":measurement_units,"annotation_color":annotation_color,"draw_color":draw_color,
-			    					"open_annotation":open_annotation.is(':checked') ? 1:0 ,"zoom_enable":zoom_enable.is(':checked') ? 1:0,"def_anno_font_size":def_anno_font_size.val(),
-			    					"disable_spell_check":disable_spell_check.is(':checked') ? 1:0,"show_points":show_points.is(':checked') ? 1:0,"spell_check_type":spell_check_type.val(),
-			    					"compare_view":compare_view,"def_anno_tab_show":def_anno_tab_show.is(':checked') ? 1:0,"user_first_name":user_first_name
-			    				},null,_success,_fail);
-		    					function _success(data){
-		    						alert(data);
-		    						if(data){
-
-		    						}
-		    					}
-		    					function _fail(data){
-		    						alert(data)	
-		    					}
-		    					
-			    			}
-			    			
-			    			function _cancelBtnClickEvent(e){
-			    				dialog.close();
-			    			}
-			    			function _init(){
-			    				measurement_units_mm = eu.input(null,{"type":"radio","name":"units"});
-			    				measurementUnits_inches = eu.input(null,{"type":"radio","name":"units"}); 
-			    				show_points = eu.input(null,{"type":"checkbox"});
-			    				//annotation_color 
-			    				//draw_color
-			    				open_annotation = eu.input(null,{"type":"checkbox"});
-			    				atCursorHover = eu.input(null,{"type":"checkbox"});
-			    				def_anno_font_size = eu.select() ;
-			    				var def_anno_font_size_small = eu.option("",null,null,"10","{0_M_J_Dialog_Op_Lable_Small}");
-			    				var def_anno_font_size_medium = eu.option("",null,null,"13.5","{0_M_J_Dialog_Op_Lable_Medium}");
-			    				var def_anno_font_size_large = eu.option("",null,null,"18","{0_M_J_Dialog_Op_Lable_Large}");
-			    				def_anno_font_size.append(def_anno_font_size_small).append(def_anno_font_size_medium).append(def_anno_font_size_large);
-			    				zoom_enable = eu.input(null,{"type":"checkbox"}) ;
-			    				def_anno_tab_show = eu.input(null,{"type":"checkbox"});
-			    				disable_spell_check = eu.input(null,{"type":"checkbox"});
-			    				spell_check_type = eu.select();
-			    				var spell_check_type_english  = eu.option("",null,null,"English","{0_M_J_Dialog_Op_Lable_English}");
-			    				var spell_check_type_french  = eu.option("",null,null,"French","{0_M_J_Dialog_Op_Lable_French}");
-			    				spell_check_type.append(spell_check_type_english).append(spell_check_type_french);
-				    			compare_view = eu.select();
-				    			var compare_view_standard  = eu.option("",null,null,"standard","{0_M_J_Dialog_Op_Lable_Standard}");
-			    				var compare_view_tab  = eu.option("",null,null,"single","{0_M_J_Dialog_Op_Lable_Tab}");
-			    				compare_view.append(compare_view_standard).append(compare_view_tab);
-				    			disable_sync_pages_check = eu.input(null,{"type":"checkbox"});
-				    			//set check
-				    			//dv_user_preference.annotation_color
-				    			//dv_user_preference.draw_color
-				    			//dv_user_preference.def_anno_font_size
-				    			//dv_user_preference.compare_view
-				    			//dv_user_preference.spell_check_type
-				    			//dv_user_preference.sens_value
-				    			//dv_user_preference.disable_anno_hover_popup
-				    			if(dv_user_preference.measurement_units==1){measurementUnits_inches.attr("checked","true")};
-				    			if(dv_user_preference.open_annotation ==1){open_annotation.attr("checked","true")};
-				    			if(dv_user_preference.show_points ==1){show_points.attr("checked","true")};
-				    			if(dv_user_preference.zoom_enable ==1){zoom_enable.attr("checked","true")};
-				    			if(dv_user_preference.def_anno_tab_show ==1){def_anno_tab_show.attr("checked","true")};
-				    			if(dv_user_preference.disable_spell_check ==1){disable_spell_check.attr("checked","true")};
-				    			if(dv_user_preference.disable_sync_pages_check ==1){disable_sync_pages_check.attr("checked","true")};
+			    			dv_davinci.initUserPreference(function(){
+			    				var dialog,
+								jq_content = eu.div("dvPreference form-horizontal"),
+								jq_footer = eu.div();
+								
+							dialog = eu.openDialog("preference",jq_content,jq_footer);
+				    			var measurement_units_mm,measurementUnits_inches,show_points,annotation_color,draw_color,open_annotation,atCursorHover,zoom_enable,def_anno_font_size,
+				    			def_anno_tab_show,disable_spell_check,spell_check_type,compare_view,disable_sync_pages_check,disable_anno_hover_popup,sens_value;
 				    			
-				    			jq_content.append(
-					    			eu.div().append(eu.label().append("{0_M_J_Dialog_Measurement_Units}")).append(measurement_units_mm).append("{0_M_J_Dialog_Measurement_Units_MM}").append(measurementUnits_inches).append("{0_M_J_Dialog_Measurement_Units_Inches}")
-					    		)
-					    		jq_content.append(
-					    			eu.div().append(eu.label().append("{0_M_J_Dialog_Measurement_Show_Points}")).append(show_points)
-					    		)
-					    		jq_content.append(
-					    			eu.div().append(eu.label().append("{0_M_J_Dialog_Annotation_Color}")).append(annotation_color)
-					    		)
-					    		jq_content.append(
-					   				eu.div().append(eu.label().append("{0_M_J_Dialog_Draw_Color}")).append(draw_color)
-					   			)
-					   			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Open_Annotation}")).append(open_annotation)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_AtCursorHover}")).append(atCursorHover)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Def_Anno_Font_Size}")).append(def_anno_font_size)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Zoom_Enable}")).append(zoom_enable)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Def_Anno_Tab_Show}")).append(def_anno_tab_show)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Disable_Spell_Check}")).append(disable_spell_check)
-				    			)
-				    			jq_content.append(
-				    				eu.div().append(eu.label().append("{0_M_J_Dialog_Spell_Check_Type}")).append(spell_check_type)
-				    			)
-				    			if(dv_brand==BRAND_COMPARE){
-					    			jq_content.append(
-					    				eu.div().append(eu.label().append("{0_M_J_Dialog_Compare_View}")).append(compare_view)
-					    			)
-					    			jq_content.append(
-					    				eu.div().append(eu.label().append("{0_M_J_Dialog_Disable_Sync_Pages_Check}")).append(disable_sync_pages_check)
-					    			)
-					    			jq_content.append(
-					    				eu.div().append(eu.label().append("{0_M_J_Dialog_Sens_Value}")).append(sens_value)
-					    			)
+				    			function _saveBtnClickEvent(e){
+				    				var urlPara = PUBLIC_CONFIGS.url_parmeters;
+				    				$(this).attr("disabled","true");
+	//error:For input string: "English"			    				
+	var	action = "w";		    				
+	var disable_anno_hover_popup = 0;			    				
+	var sens_value = 0 ;			    				
+	var user_id = urlPara.userId?urlPara.userId:"1" ;
+	var measurement_units = measurementUnits_inches.is(':checked') ? 1 : 0 ;
+	var annotation_color = "";
+	var draw_color = "" ;
+	var compare_view = null;
+	var user_first_name = urlPara.forename?urlPara.forename:"";
+	var user_last_name = urlPara.surname?urlPara.surname:"",
+	disable_sync_pages_check = 0;
+				    				DVUtil.callJSON("userpreference.davinci",{
+				    					"sessionid":PUBLIC_CONFIGS.session_id,
+				    					"dataType":DATA_TYPE,
+				    					"action":action,
+				    					"disable_anno_hover_popup":disable_anno_hover_popup,
+				    					"sens_value":sens_value,
+				    					"user_id":user_id,
+				    					"measurement_units":measurement_units,
+				    					"annotation_color":annotation_color,
+				    					"draw_color":draw_color,
+				    					"open_annotation":open_annotation.is(':checked') ? 1:0 ,
+				    					"zoom_enable":zoom_enable.is(':checked') ? 1:0,
+				    					"def_anno_font_size":def_anno_font_size.val(),
+				    					"disable_spell_check":disable_spell_check.is(':checked') ? 1:0,
+				    					"show_points":show_points.is(':checked') ? 1:0,
+				    					"spell_check_type":spell_check_type.val(),
+				    					"compare_view":compare_view,
+				    					"def_anno_tab_show":def_anno_tab_show.is(':checked') ? 1:0,
+				    					"user_first_name":user_first_name,
+				    					"user_last_name":user_last_name,
+				    					"disable_sync_pages_check":disable_sync_pages_check
+				    				},null,_success,_fail);
+			    					function _success(data){
+			    						if(data){
+			    							dv_user_preference = data;
+			    						}
+			    						dialog.close();
+			    					}
+			    					function _fail(data){
+			    						alert(data);
+			    						$(this).removeAttr("disabled");
+			    					}
+			    					
 				    			}
-				    			var jq_btn_div = eu.div("",{},{"text-align":"center","padding-top":"10px"});
-			    				var save_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Save}").bind("click",{},_saveBtnClickEvent) ;
-			    				var cancel_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Cancel_2}").bind("click",{},_cancelBtnClickEvent);
-			    				jq_btn_div.append(save_btn).append(cancel_btn);
-			    				jq_content.append(jq_btn_div);
-				    			dialog.open();
-			    			}
-			    			
-							_init();
+				    			
+				    			function _cancelBtnClickEvent(e){
+				    				dialog.close();
+				    			}
+				    			function _init(){
+				    				measurement_units_mm = eu.input(null,{"type":"radio","name":"units"});
+				    				measurementUnits_inches = eu.input(null,{"type":"radio","name":"units"}); 
+				    				show_points = eu.input(null,{"type":"checkbox"});
+				    				//annotation_color 
+				    				//draw_color
+				    				open_annotation = eu.input(null,{"type":"checkbox"});
+				    				atCursorHover = eu.input(null,{"type":"checkbox"});
+				    				def_anno_font_size = eu.select("form-control") ;
+
+				    				var def_anno_font_size_small = eu.option("",null,null,"10","Small");
+				    				var def_anno_font_size_medium = eu.option("",null,null,"13.5","Medium");
+				    				var def_anno_font_size_large = eu.option("",null,null,"18","Large");
+				    				def_anno_font_size.append(def_anno_font_size_small).append(def_anno_font_size_medium).append(def_anno_font_size_large);
+
+				    				zoom_enable = eu.input(null,{"type":"checkbox"}) ;
+				    				def_anno_tab_show = eu.input(null,{"type":"checkbox"});
+				    				disable_spell_check = eu.input(null,{"type":"checkbox"});
+				    				spell_check_type = eu.select("form-control");
+				    				var spell_check_type_english  = eu.option("",null,null,0,"English");
+				    				var spell_check_type_french  = eu.option("",null,null,1,"French");
+				    				spell_check_type.append(spell_check_type_english).append(spell_check_type_french);
+					    			compare_view = eu.select("form-control");
+					    			var compare_view_standard  = eu.option("",null,null,"standard","Standard");
+				    				var compare_view_tab  = eu.option("",null,null,"single","Tab");
+				    				compare_view.append(compare_view_standard).append(compare_view_tab);
+					    			disable_sync_pages_check = eu.input(null,{"type":"checkbox"});
+					    			//set check
+					    			//dv_user_preference.annotation_color
+					    			//dv_user_preference.draw_color
+					    			//dv_user_preference.def_anno_font_size
+					    			//dv_user_preference.compare_view
+					    			//dv_user_preference.spell_check_type
+					    			//dv_user_preference.sens_value
+					    			//dv_user_preference.disable_anno_hover_popup
+					    			if(dv_user_preference.measurement_units==1){measurementUnits_inches.attr("checked","true")};
+					    			if(dv_user_preference.open_annotation ==1){open_annotation.attr("checked","true")};
+					    			if(dv_user_preference.show_points ==1){show_points.attr("checked","true")};
+					    			if(dv_user_preference.zoom_enable ==1){zoom_enable.attr("checked","true")};
+					    			if(dv_user_preference.def_anno_tab_show ==1){def_anno_tab_show.attr("checked","true")};
+					    			if(dv_user_preference.disable_spell_check ==1){
+					    				disable_spell_check.attr("checked","true")
+					    			}else{
+					    				spell_check_type.attr({"disabled":"disabled"});
+					    			}
+					    			if(dv_user_preference.disable_sync_pages_check ==1){disable_sync_pages_check.attr("checked","true")};
+					    			
+					    			spell_check_type.val(dv_user_preference.spell_check_type);
+					    			
+					    			jq_content.append(
+						    			eu.div("form-group").append(eu.label("col-sm-6 control-label").text("Measurement Units"))
+					    				.append(
+					    					eu.div("col-sm-6").append(
+					    						eu.label("radio-inline").append(measurement_units_mm).append(eu.span().text("MM"))
+					    					).append(
+					    						eu.label("radio-inline").append(measurementUnits_inches).append(eu.span().text("Inches"))
+					    					)
+					    				)
+						    		)
+						    		jq_content.append(
+						    			eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Show Points Measurement(PS)")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(show_points)
+						    					)
+						    				)
+						    			)
+						    		)
+						    		jq_content.append(
+						    			eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Annotation Colour")
+						    			).append(
+						    				eu.div("col-sm-6").append(annotation_color)
+						    			)
+						    		)
+						    		jq_content.append(
+						   				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Drawing Colour")
+						    			).append(
+						    				eu.div("col-sm-6").append(draw_color)
+						    			)
+						   			)
+						   			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Open Annotations at startup?")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(open_annotation)
+						    					)
+						    				)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Open Annotations at cursor hover?")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(atCursorHover)
+						    					)
+						    				)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Default font size for Annotations")
+						    			).append(
+						    				eu.div("col-sm-6").append(def_anno_font_size)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Enable click to zoom")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(zoom_enable)
+						    					)
+						    				)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Show names in thread tabs?")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(def_anno_tab_show)
+						    					)
+						    				)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Ebable Spell Check?")
+						    			).append(
+						    				eu.div("col-sm-6").append(
+						    					eu.div("checkbox").append(
+						    						eu.label().append(disable_spell_check)
+						    					)
+						    				)
+						    			)
+					    			)
+					    			jq_content.append(
+					    				eu.div("form-group").append(
+						    				eu.label("col-sm-6 control-label").text("Spell Check Language")
+						    			).append(
+						    				eu.div("col-sm-6").append(spell_check_type)
+						    			)
+					    			)
+					    			if(dv_brand==BRAND_COMPARE){
+						    			jq_content.append(
+						    				eu.div("form-group").append(
+							    				eu.label("col-sm-6 control-label").text("Default Compare Mode")
+							    			).append(
+							    				eu.div("col-sm-6").append(compare_view)
+							    			)
+						    			)
+						    			jq_content.append(
+						    				eu.div("form-group").append(
+							    				eu.label("col-sm-6 control-label").text("Synchronise pages in compare?")
+							    			).append(
+							    				eu.div("col-sm-6").append(
+							    					eu.div("checkbox").append(
+							    						eu.label().append(disable_sync_pages_check)
+							    					)
+							    				)
+							    			)
+						    			)
+						    			jq_content.append(
+						    				eu.div("form-group").append(
+							    				eu.label("col-sm-6 control-label").text("Sensitivity Setting")
+							    			).append(
+							    				eu.div("col-sm-6").append(sens_value)
+							    			)
+						    			)
+					    			}
+					    			var jq_btn_div = eu.div();
+				    				var save_btn = eu.button("btn btn-primary").text("Save").bind("click",{},_saveBtnClickEvent);
+				    				var cancel_btn = eu.button("btn btn-primary").text("Cancel").bind("click",{},_cancelBtnClickEvent);
+				    				jq_btn_div.append(save_btn).append(cancel_btn);
+				    				jq_footer.append(jq_btn_div);
+					    			dialog.open();
+				    			}
+				    			
+								_init();
+			    			});
 			    		}
 		    		}
 
@@ -3844,23 +4296,23 @@ var user_first_name = "";
 				    				jq_numberSize.append(op);
 				    			}
 				    			jq_LineSize = eu.select();
-				    			jq_LineSize.append(eu.option("",{},{},"","auto"));
+				    			jq_LineSize.append(eu.option("",{},{},0,"auto"));
 				    			for(var i = 1; i<=20;i++){
 				    				var op = eu.option("",{},{},i,i);
 				    				jq_LineSize.append(op);
 				    			}
 				    			
-				    			var title_div = eu.div("title").append("{0_M_J_Print_Dialog_Title}");
+				    			var title_div = eu.div("title").append("Please select which items you want to print");
 				    			var content_div = eu.div("content");
-				    			content_div.append(eu.div().append(eu.label().append("{0_M_J_Print_Artwork}")).append(jq_artwork));
-				    			content_div.append(eu.div().append(eu.label().append("{0_M_J_Print_Annotations}")).append(jq_annotations));
-				    			content_div.append(eu.div().append(eu.label().append("{0_M_J_Print_SummarySheet}")).append(jq_summarySheet));
-				    			content_div.append(eu.div().append(eu.label().append("{0_M_J_Print_AnnotationNumberSize}")).append(jq_numberSize));
-				    			content_div.append(eu.div().append(eu.label().append("{0_M_J_Print_AnnotationLineSize}")).append(jq_LineSize));
+				    			content_div.append(eu.div().append(eu.label().append("Artwork")).append(jq_artwork));
+				    			content_div.append(eu.div().append(eu.label().append("Annotations")).append(jq_annotations));
+				    			content_div.append(eu.div().append(eu.label().append("Summary sheet")).append(jq_summarySheet));
+				    			content_div.append(eu.div().append(eu.label().append("Annotation Number Size")).append(jq_numberSize));
+				    			content_div.append(eu.div().append(eu.label().append("Annotation Line Size")).append(jq_LineSize));
 				    			
 				    			var jq_btn_div = eu.div("",{},{"text-align":"center","padding-top":"10px"});
-		    					var confirm_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Confirm}").bind("click",{},_confirmBtnClickEvent) ;
-		    					var cancel_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Cancel}").bind("click",{},_cancelBtnClickEvent);
+		    					var confirm_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("confirm").bind("click",{},_confirmBtnClickEvent) ;
+		    					var cancel_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("cancel").bind("click",{},_cancelBtnClickEvent);
 		    					jq_btn_div.append(confirm_btn).append(cancel_btn);
 		    					content_div.append(jq_btn_div);
 		    					
@@ -3871,21 +4323,12 @@ var user_first_name = "";
 			    			
 			    			function _confirmBtnClickEvent(e){
 			    				$(this).attr("disabled","true");
-//Error: success_jsonpCallback_JSON_337305054305 was not called			    				
-var printSel = [jq_artwork.is(':checked'),jq_annotations.is(':checked'),jq_summarySheet.is(':checked')];
-var timezoneOffset = 0 ;
+var printSel = jq_artwork.is(':checked')+"|"+jq_annotations.is(':checked')+"|"+jq_summarySheet.is(':checked');
+var timezoneOffset = -1*(new Date()).getTimezoneOffset() ;
 var numSize = jq_numberSize.val() ;
 var lineSize = jq_LineSize.val();
-								DVUtil.callJSON("createpdf.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"printSel":printSel,"timezoneOffset":timezoneOffset,"numSize":numSize,"lineSize":lineSize},null,_success,_fail);
-		    					function _success(data){
-		    						alert(data);
-		    						if(data){
-
-		    						}
-		    					}
-		    					function _fail(data){
-		    						alert(data)	
-		    					}
+								DVUtil.callURL("createpdf.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"printSel":printSel,"timezoneOffset":timezoneOffset,"numSize":numSize,"lineSize":lineSize});
+								$(this).removeAttr("disabled");
 			    			}
 			    			
 			    			function _cancelBtnClickEvent(e){
@@ -3908,7 +4351,7 @@ var lineSize = jq_LineSize.val();
 			    		this.btnICON = ICON_APPROVAL;
 			    		function _clickEvent(e){
 			    			var dialog,
-			    			jq_content = eu.div(),
+			    			jq_content = eu.div(null,null,{"width":"600px"}),
 			    			jq_footer = eu.div(),
 			    			jq_doc_div = eu.div().css({"padding-left":"8px"}),
 			    			jq_textarea,jq_rejection_sel;
@@ -3920,16 +4363,51 @@ var lineSize = jq_LineSize.val();
 			    			}
 			    			
 			    			function _confirmBtnClickEvent(e){
+			    				var status = e.data.status;
 			    				$(this).attr("disabled","true");
 //error:can not find the systemid=0 in application when sessionkey=192.168.1.201 Please check the sessionkey is valid and the status is success to define.
 var action = "approve";
-var apptype = 0 ;			    				
-var num = 1 ;
-			    				DVUtil.callJSON("approvals.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"dataType":DATA_TYPE,"action":action,"apptype":apptype,"num":num,"comment":jq_textarea.val(),"rejection":jq_textarea.val()},null,_success,_fail);
+var apptype = status.systemid ;			    				
+var num = (dv_brand==BRAND_COMPARE)?1:0 ;
+			    				DVUtil.callJSON("approvals.davinci",{
+			    					"sessionid":PUBLIC_CONFIGS.session_id,
+			    					"dataType":DATA_TYPE,
+			    					"action":action,
+			    					"apptype":apptype,
+			    					"num":num,
+			    					"comment":jq_textarea?base64encode(jq_textarea.val()):"",
+			    					"rejection":jq_rejection_sel?base64encode(jq_rejection_sel.val()):""
+			    				},null,_success,_fail);
 		    					function _success(data){
-		    						alert(data);
 		    						if(data){
-
+		    							var callbackURL = PUBLIC_CONFIGS.url_parmeters["callbackurl"]+"/"+status.url+"?",
+		    							pl = status.parameterListGet;
+		    							if(pl&&pl.length>0){
+		    								for(var i=0;i<pl.length;i++){
+		    									callbackURL += "&"+pl[i] + "=" + PUBLIC_CONFIGS.url_parmeters[pl[i]];
+		    								}
+		    							}
+		    							if(jq_textarea){
+		    								var comment = jq_textarea.val();
+		    								callbackURL += "&comment="+base64encode(comment);
+		    							}
+		    							if(jq_rejection_sel){
+		    								var rejection = jq_rejection_sel.val();
+		    								callbackURL += "&rejection="+base64encode(rejection);
+		    							}
+		    							callbackURL += "&status="+status.value;
+		    							if(PUBLIC_CONFIGS.access_level=="11"){
+		    								DVUtil.callAJAX(callbackURL,null,false,function(){
+		    									window.parent.postMessage("notAppCallback()","*")
+		    								},function(){
+		    									
+		    								})
+		    								
+		    							} else {
+		    								window.parent.postMessage(";(function(){window.location.href='"+callbackURL+"';})();","*")
+		    							}
+		    							
+		    							dialog.close();
 		    						}
 		    					}
 		    					function _fail(data){
@@ -3946,15 +4424,16 @@ var num = 1 ;
 			    				_reset();
 			    				var comment = e.data.comment ;
 			    				var rejection = e.data.rejection ;
+			    				var status = e.data.status;
 			    				var rejectionReasons = e.data.rejectionReasons ;
 			    				if(comment == "true"){
-			    					var jq_doc_title = eu.div().append("{0_M_J_Approval_Dialog_Enter_Commnet}").css({"text-align":"left","font-weight":"bold","padding-top":"10px","padding-bottom":"20px"});
-			    					jq_textarea = eu.textarea().css({"text-align":"left","width":"100%","height":"100px"});
+			    					var jq_doc_title = eu.div().append("Please enter a comment").css({"text-align":"left","font-weight":"bold","padding-top":"10px","padding-bottom":"20px"});
+			    					jq_textarea = eu.textarea().css({"text-align":"left","width":"550px","height":"100px","resize":"none"});
 			    					jq_doc_div.append(jq_doc_title);
 			    					jq_doc_div.append(jq_textarea);
 			    				}
 			    				if(rejection == "true"){
-			    					var jq_rejection_title_div = eu.div().append("{0_M_J_Approval_Dialog_Rejection_Title}").css({"text-align":"left","font-weight":"bold","padding-top":"10px","padding-bottom":"20px"});
+			    					var jq_rejection_title_div = eu.div().append("Please select reason for your rejection").css({"text-align":"left","font-weight":"bold","padding-top":"10px","padding-bottom":"20px"});
 			    					jq_rejection_sel = eu.select("",{},{"width":"500px"}).val("") ;
 			    					var jq_rejectionReasons = eu.div().append();
 			    					jq_rejection_sel.append(eu.option("",{},{},"","-"));
@@ -3969,14 +4448,16 @@ var num = 1 ;
 			    				}
 			    				if(comment == "true" || rejection == "true"){
 			    					var jq_doc_btn_div = eu.div("jq_doc_btn_div",{},{"text-align":"center","padding-top":"10px"});
-			    					var confirm_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Confirm}").bind("click",{},_confirmBtnClickEvent) ;
-			    					var cancel_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("{0_M_J_Dialog_Cancel}").bind("click",{},_cancelBtnClickEvent);
+			    					var confirm_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("confirm").bind("click",{"status":status},_confirmBtnClickEvent) ;
+			    					var cancel_btn = eu.button("btn btn-primary",{},{"margin-left":"10px","margin-right":"10px"}).text("cancel").bind("click",{},_cancelBtnClickEvent);
 			    					jq_doc_btn_div.append(confirm_btn).append(cancel_btn);
 			    					jq_doc_div.append(jq_doc_btn_div);
+			    				}else{
+			    					_confirmBtnClickEvent(e);
 			    				}
 			    			}
 			    			
-			    			jq_content.append(eu.div().append("{0_M_J_Approval_Dialog_Doc_Title}").css({"text-align":"center","font-weight":"bold","padding-top":"20px","padding-bottom":"20px"}));	
+			    			jq_content.append(eu.div().append("Please select your status for this document:").css({"text-align":"center","font-weight":"bold","padding-top":"20px","padding-bottom":"20px"}));	
 			    			if(dv_config_bean&&dv_config_bean.statuses){
 			    				for(var i=0;i<dv_config_bean.statuses.length;i++){
 			    					jq_content.append(
@@ -3987,7 +4468,12 @@ var num = 1 ;
 			    							"background-color":dv_config_bean.statuses[i].color?dv_config_bean.statuses[i].color:"#FFFFFF"
 			    						})
 			    						.text(dv_config_bean.statuses[i].name)
-			    						.bind("click",{"comment":dv_config_bean.statuses[i].comment,"rejection":dv_config_bean.statuses[i].rejection,"rejectionReasons":dv_config_bean.rejectionReasons},_btnClickEvent)
+			    						.bind("click",{
+			    							"comment":dv_config_bean.statuses[i].comment,
+			    							"rejection":dv_config_bean.statuses[i].rejection,
+			    							"rejectionReasons":dv_config_bean.rejectionReasons,
+			    							"status":dv_config_bean.statuses[i]
+			    							},_btnClickEvent)
 			    					);
 			    				}
 			    			}
@@ -4504,7 +4990,7 @@ var num = 1 ;
 									_nextIcon = eu.a().append(eu.img("nextIcon",{"src":ICON_PAGE_NEXTPAGE}));
 									_curPageInput = eu.input("curPageInput").val(1);
 									_curPageSpan = eu.span("curPageSpan").text(1);
-									_pageNumPanel.append(_preIcon).append(_curPageInput).append("(").append(_curPageSpan).append(" {0_M_J_Page_NAV_Of} " + _totalPage + ")").append(_nextIcon),
+									_pageNumPanel.append(_preIcon).append(_curPageInput).append("(").append(_curPageSpan).append(" of " + _totalPage + ")").append(_nextIcon),
 									pagePreviewLayout = eu.div("page_preview_layout");
 									_pagePreview = eu.div("pagePreview")
 									for(var i = 1; i <= _totalPage ; i++){
@@ -4538,22 +5024,22 @@ var num = 1 ;
 									_curPageInput.bind("keydown",{},_curPageInputKeydownEvent);
 
 									function _singleIconClickEvent(e){
-										var _zoom = DVToolbar.Toolbar.getDVZoom(),
-										_zoom100 = DVToolbar.Toolbar.getDVZoom100();
+										var _zoom = DVToolbar.Toolbar.getDVZoom();
+										//_zoom100 = DVToolbar.Toolbar.getDVZoom100();
 										_singleIcon.css({"opacity":_2PAGES_SELED_OP});
 										_compareIcon.css({"opacity":_2PAGES_UNSELED_OP});
 										_isSinglePreview = true ;
 										_pagePanel.find(".preIcon").show();
 										_pagePanel.find(".nextIcon").show();
 										_pagePanel.find(".curPageInput").removeAttr("disabled");
-										if(_zoom&&_zoom100){
-											_zoom100.show();
-										}
+										// if(_zoom&&_zoom100){
+										// 	_zoom100.show();
+										// }
 										_that.setPage();
 									}
 
 									function _compareIconClickEvent(e){
-										var _zoom100 = DVToolbar.Toolbar.getDVZoom100();
+										//var _zoom100 = DVToolbar.Toolbar.getDVZoom100();
 										_compareIcon.css({"opacity":_2PAGES_SELED_OP});
 										_singleIcon.css({"opacity":_2PAGES_UNSELED_OP});										
 
@@ -4561,9 +5047,9 @@ var num = 1 ;
 										_pagePanel.find(".preIcon").hide();
 										_pagePanel.find(".nextIcon").hide();
 										_pagePanel.find(".curPageInput").attr("disabled","true");
-										if(_zoom100){
-											_zoom100.hide();
-										}
+										// if(_zoom100){
+										// 	_zoom100.hide();
+										// }
 										_that.setPage();
 										
 									}
@@ -4634,16 +5120,19 @@ var num = 1 ;
 		    			_canvas,
 					_context,
 					_viewport,
-					STATUS_PEDDING_TEXT = "Pedding",
+					ratateBtn = DVToolbar.Toolbar.getDVRotate(),
+					STATUS_PEDDING_TEXT = "Pending",
 					STATUS_PROCE_FILE_TEXT = "Processing File",
 					STATUS_PROCE_SLICE_TEXT = "Processed Slices",
 					STATUS_PROCESSED_TEXT = "Processed File",
-					STATUS_PEDDING = "pedding",
+					STATUS_PEDDING = "pending",
 					STATUS_PROCE_FILE = "processing",
 					STATUS_PROCE_SLICE = "processedslices",
 					STATUS_PROCESSED = "processed",
 					pending
-					EXSTATUS_PROCESSED = "separatedprocessed";			
+					EXSTATUS_PROCESSED = "separatedprocessed";	
+					_that.rotation = ratateBtn.getRotation();
+							
 		    			this.init = function(){
 		    				_that.initElement();
 		    				
@@ -4725,8 +5214,16 @@ var num = 1 ;
 		    			}
 
 		    			this.canvasMousedown = function(e,viewer){
-		    				
-		    				DVUtil.stopEvent(e);
+		    				_that.rotation = ratateBtn.getRotation();
+
+		    				dv_toolbar_action!=TOOL_NONE?DVUtil.stopEvent(e):null;
+		    				/*if(DVUtil.System==PC){
+		    					DVUtil.stopEvent(e);
+		    				}else if(DVUtil.System==MOBILE){
+		    					if(dv_toolbar_action!=TOOL_NONE){
+		    						DVUtil.stopEvent(e);
+		    					}
+		    				}*/
    								
 		    				var x = e.x || e.offsetX,
       						y = e.y || e.offsetY,
@@ -4739,6 +5236,8 @@ var num = 1 ;
       						if(e.targetTouches){
       							x = e.targetTouches[0].clientX;
 	      						y = e.targetTouches[0].clientY-_dvToolbar_layout.height();
+	      						 _touchEndClientX = e.targetTouches[0].clientX;
+	      						 _touchEndClientY = e.targetTouches[0].clientY;
       						}
       						if(!x||!y){
       							x = e.clientX;
@@ -4760,7 +5259,7 @@ var num = 1 ;
 	    			 		e.preventDefault();
 		    			}
 		    			this.canvasMousemove = function(e,viewer){
-		    				DVUtil.stopEvent(e);
+		    				dv_toolbar_action!=TOOL_NONE?DVUtil.stopEvent(e):null;
 		    				var targetTouches = e.targetTouches,
 		    				x = e.x || e.offsetX,
       						y = e.y || e.offsetY,
@@ -4776,7 +5275,6 @@ var num = 1 ;
       						W_S = 5,H_S = 5,
       						anno_drawer;
 
-      						// DVUtil.log(x+","+y);
       						if(viewer==dv_viewer){
       							anno_drawer = dv_annos_drawer;
       						}else if(viewer==dv_viewer1){
@@ -4833,7 +5331,11 @@ var num = 1 ;
 			    			 			var w = Math.abs(x - _mousedownOffsetX),
 			    			 			h = Math.abs(y - _mousedownOffsetY),
 			    			 			_x = _mousedownOffsetX>x ? x :_mousedownOffsetX,
-			    			 			_y = _mousedownOffsetY>y ? y :_mousedownOffsetY;
+			    			 			_y = _mousedownOffsetY>y ? y :_mousedownOffsetY,
+			    			 			lX = 0,
+										lY = 0,
+										lW = 0,
+										lH = 0;
 			    			 			_context.putImageData(_orgImgdata,0,0);
 			    			 			_context.save();
 			    			 			_context.globalAlpha=1;
@@ -4925,13 +5427,17 @@ var num = 1 ;
 	    			 		
 		    			}
 		    			this.canvasMouseup = function(e,viewer){
-		    				DVUtil.stopEvent(e);
+		    				dv_toolbar_action!=TOOL_NONE?DVUtil.stopEvent(e):null;
 		    				var x = e.clientX || _touchEndClientX,
       						y = e.clientY || _touchEndClientY,
       						_canvas = viewer.drawer.canvas,
       						_context = viewer.drawer.context,
       						_viewport = viewer.viewport;
-		    				e.preventDefault();
+		    				/*if(DVUtil.System==MOBILE&&e.targetTouches){
+	      						x =  e.targetTouches[0].clientX;
+	      						y =  e.targetTouches[0].clientY;
+      						}*/
+//		    				e.preventDefault();
 		    				if(dv_toolbar_action!=TOOL_NONE){
 	    			 			if(dv_toolbar_action==TOOL_ZOOM){
 		    			 			var w = Math.abs(x - _mousedownClientX),
@@ -4959,6 +5465,8 @@ var num = 1 ;
 									_viewport.fitBounds(bounds);
 									DVToolbar.Toolbar.getDVZoom().cancel();
 									viewer.setMouseNavEnabled(true);
+		    			 		}else if(dv_toolbar_action==TOOL_DENSITOMETER){
+		    			 			
 		    			 		}else{
 		    			 			var _page = 1;
 		    			 			if(viewer==dv_viewer){
@@ -4984,9 +5492,13 @@ var num = 1 ;
 		    			 			_y = _mousedownClientY>y ? y :_mousedownClientY,
 		    			 			opoint = new OpenSeadragon.Point(_x,_y),
 		    			 			vpoint = _viewport.windowToImageCoordinates( opoint ),		    			 			
-		    			 			vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) ),
-		    			 			sencePoint = DVDrawerUtil.dvToImageCor(vpoint_mouseup.x,vpoint_mouseup.y),
+		    			 			ipoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) ),
+		    			 			vpoint_mouseup = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(x,y) )),
+		    			 			sencePoint = null,//DVDrawerUtil.dvToImageCor(vpoint_mouseup.x,vpoint_mouseup.y),
 		    			 			page_info = _getPageInfo(viewer),
+		    			 			urlPara = PUBLIC_CONFIGS.url_parmeters,
+		    			 			lX = 0,
+									lY = 0,
 		    			 			annotaion = {
 								            "acid": "new",
 								            "action": false,
@@ -5002,8 +5514,8 @@ var num = 1 ;
 								            "pageLabel": null,
 								            "playheadtime": null,
 								            "progressiveId": "new",
-								            "sceneX": sencePoint.x,
-								            "sceneY": sencePoint.y,
+								            "sceneX": 0,
+								            "sceneY": 0,
 								            "shape": {
 								                "color": "1",
 								                "type": ""
@@ -5012,9 +5524,9 @@ var num = 1 ;
 								            "timestamp": new Date(),
 								            "type": null,
 								            "user": {
-								                "firstName": "shinelen",
-								                "id": "112",
-								                "lastName": "Brüning",
+								                "firstName": urlPara.forename,
+								                "id": urlPara.userId?urlPara.userId:"-1",
+								                "lastName": urlPara.surname,
 								                "loginName": null,
 								                "password": null
 								            }
@@ -5023,8 +5535,39 @@ var num = 1 ;
 				    				draw_color = dv_user_preference.draw_color.replace("0x","#"),
 				    				draw_color16 = dv_user_preference.draw_color.replace("0x",""),
 				    				draw_color10 = parseInt(draw_color16,16);
+
+									
+									
+									switch(_that.rotation){
+										case 180:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = 2*center.x-vpoint_mouseup.x;
+											lY = 2*center.y-vpoint_mouseup.y+Math.abs(vpoint_mouseup.y-y);
+											ipoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 270:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.y+center.x-vpoint_mouseup.y;
+											lY = vpoint_mouseup.x+center.y-center.x+Math.abs(vpoint_mouseup.y-y);
+											ipoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 90:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.x-center.y+vpoint_mouseup.y;
+											lY = center.y+center.x-vpoint_mouseup.x+Math.abs(vpoint_mouseup.y-y);
+											ipoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										default:
+											lX = ipoint_mouseup.x;
+											lY = ipoint_mouseup.y;
+										break;
+									}
+									sencePoint = DVDrawerUtil.dvToImageCor(ipoint_mouseup.x,ipoint_mouseup.y);
+									annotaion.sceneX = sencePoint.x;
+									annotaion.sceneY = sencePoint.y;
+
 				    				// _context.putImageData(_image_data_temp, 0, 0);
-				    				if(!_chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info)){
+				    				if(!_chkOverBounds(_vpoint_mousedown,ipoint_mouseup,page_info)){
 				    					_context.putImageData(_orgImgdata,0,0);
 		    			 				_dragging = false;
 		    			 				return;
@@ -5149,6 +5692,8 @@ var num = 1 ;
     			 				page_info = dv_page_info1;
     			 			}else if(viewer==dv_viewer2){
     			 				page_info = dv_page_info2;
+    			 			}else if(viewer==dv_viewer_page){
+    			 				page_info = dv_page_info_page;
     			 			}
     			 			return page_info;
 		    			}
@@ -5181,7 +5726,6 @@ var num = 1 ;
 					this.openViewer = function(){
 						var progress = eu.progress(),
 							num = 0;
-							DVUtil.log(["remove",_dvCanvas]);
 						_dvCanvas.find(".dv-annotation").remove();
 						_dvCanvas.find(".dv-annotation-view").remove();
 						_dvCanvas.find(".openseadragon-container").hide();
@@ -5221,7 +5765,6 @@ var num = 1 ;
 	    												
 					}
 			    		this.createViewer = function(){
-			    			DVUtil.log("this.createViewer")
 			    			var _drawer,
 		    			 	_canvas,
 		    			 	_context,
@@ -5268,7 +5811,7 @@ var num = 1 ;
 								$canvas.bind("mouseup",{},_canvasMouseupEvent);
 								// $canvas.bind("mouseout",{},_canvasMouseupEvent);
 
-								if(_canvas.addEventListener){DVUtil.log("addEventListener")
+								if(_canvas.addEventListener){
 									_canvas.addEventListener("touchstart",_canvasMousedownEvent);
 									_canvas.addEventListener("touchmove",_canvasMousemoveEvent);
 									_canvas.addEventListener("touchend",_canvasMouseupEvent);
@@ -5287,12 +5830,10 @@ var num = 1 ;
 									_that.canvasMouseup(e,_viewer);
 								}
 
-			    			 	u.log("open");
 			    			 	setTimeout(function(){
 
 				    			 		dv_image_data = _context.getImageData(0, 0,_canvas.width,_canvas.height);
 				    			 		dv_annos_drawer.draw();
-				    			 		u.log("3")
 				    			 	}, 1000);   
 			    			 }
 
@@ -5315,10 +5856,6 @@ var num = 1 ;
 			    			 	var userData = e.userData;
 			    			 	dv_image_data = _context.getImageData(0, 0,_canvas.width,_canvas.height);
 			    			 	dv_annos_drawer.draw();
-			    			 	u.log(1)
-			    			 	
-						    	// u.log(e);
-						    	// viewer.setFullScreen(true);
 			    			 }
 			    		}
 			    		this.init();
@@ -5409,7 +5946,6 @@ var num = 1 ;
 						this.openViewer1 = function(){
 							var progress = eu.progress(),
 								num = 0;
-								DVUtil.log(["remove",_dvCanvas1]);
 							_dvCanvas1.find(".dv-annotation").remove();
 							_dvCanvas1.find(".dv-annotation-view").remove();
 							_dvCanvas1.find(".openseadragon-container").hide();
@@ -5452,7 +5988,6 @@ var num = 1 ;
 						this.openViewer2 = function(){
 							var progress = eu.progress(),
 								num = 1;
-								DVUtil.log(["remove",_dvCanvas2]);
 							_dvCanvas2.find(".dv-annotation").remove();
 							_dvCanvas2.find(".dv-annotation-view").remove();
 							_dvCanvas2.find(".openseadragon-container").hide();
@@ -5476,7 +6011,6 @@ var num = 1 ;
 							}else{
 			    					var page = 1;
 			    					new _that.initProgress(progress,num,function(data){
-			    						DVUtil.log(["open view2",data])
 			    						progress.destory();
 			    						dv_davinci.initImageInfo(function(data){
 			    							dv_davinci.getPageInfo2(page,function(){
@@ -5560,8 +6094,6 @@ var num = 1 ;
 					    			 		_canvasURL1 = _canvas.toDataURL();
 					    			 		dv_annos_drawer1.draw();
 					    			 	}, 1000);   
-				    			 	u.log("open1");
-				    			 	
 
 				    			 }
 
@@ -5671,8 +6203,6 @@ var num = 1 ;
 				    			 		dv_annos_drawer2.draw();
 				    			 	}, 1000);   
 				    			 	
-				    			 	u.log("open2");
-				    			 	
 				    			 }
 
 				    			 function _animationStartEvent(e){
@@ -5697,7 +6227,6 @@ var num = 1 ;
 					    			 		dv_annos_drawer2.draw();
 					    			 	}, 1000);   
 				    			 	}
-				    			 	// u.log(_viewport.getBounds())
 				    			 	if(snycAnimation2){
 				    			 		(dv_viewer1&&dv_viewer1.viewport)?dv_viewer1.viewport.fitBounds(_viewport.getBounds(),true):null;
 				    			 	}
@@ -5762,7 +6291,7 @@ var num = 1 ;
 							_pageinfo = dv_page_info_page;
 							if(dv_brand==BRAND){								
 								_imageinfo = dv_image_info;
-								_dvpagePanel = DVPageNavigate.pageNav.getPanel();								
+								_dvpagePanel = DVPageNavigate.pageNav?DVPageNavigate.pageNav.getPanel():null;
 							}else if(dv_brand==BRAND_COMPARE){
 								if(dv_current_num.length==1){
 									if(dv_current_num[0]==1){
@@ -5774,6 +6303,13 @@ var num = 1 ;
 									}
 								}
 							}
+						}
+						this.storeImagedata = function(){
+		    				(_context&&_canvas)?_orgImgdata = _context.getImageData(0, 0,_canvas.width,_canvas.height):null;
+		    			}
+						this.setImagedata = function(imagedata){
+							imagedata = !imagedata?_orgImgdata:imagedata;
+							_context?_context.putImageData(imagedata,0,0):null;
 						}
 						this.getCanvasElement = function(){
 							return _dvCanvas;
@@ -5787,17 +6323,31 @@ var num = 1 ;
 							_dvCanvas2pages.hide();
 						}
 						this.openViewer = function(){
-							var dvsep = DVToolbar.Toolbar.getDVSeparate(),
+							var progress = eu.progress(),
+							s = DVUtil.getCurrentStatus(),
+							num = s.num[0],
+							dvsep = DVToolbar.Toolbar.getDVSeparate(),
 							bean = dvsep?dvsep.getSelectedBean():null,_url,
 							_page;
+							_dvCanvas.find(".dv-annotation").remove();
+							_dvCanvas.find(".dv-annotation-view").remove();
+							_dvCanvas.find(".openseadragon-container").hide();
+							_dvCanvas.append(progress.getElement());
+
 							_initData();
 							_page = _dvpagePanel.getCurrentPage2()
+
 							if((!bean)||bean.data=="All"){
 	    						_url = _pageinfo.sliceurl+"/"+_imageinfo.docObject.acid+"_"+_page+".xml";
 	    					}else{
 	    						_url = _pageinfo.sliceurl+"/separations/"+_imageinfo.docObject.acid+"_"+_page+"."+bean.data+".xml";
 	    					}
-							_viewer?_viewer.open(_url):_that.createViewer(_url);							
+	    					_that.initProgress(progress,num,function(){
+		    					_dvCanvas.find(".openseadragon-container").show();								
+								_viewer?_viewer.open(_url):_that.createViewer(_url);
+								progress.destory();
+							});
+
 						}
 			    		this.createViewer = function(url){
 			    			var _drawer,
@@ -5807,7 +6357,6 @@ var num = 1 ;
 		    			 	_acid,
 							_page,
 		    			 	_tilepath=url?url:"";
-
 		    			 	_initData();
 		    			 	_acid = _imageinfo.docObject.acid;
 		    			 	_page = _dvpagePanel.getCurrentPage2();
@@ -5820,10 +6369,11 @@ var num = 1 ;
 						        tileSources: _tilepath,
 						        minZoomImageRatio:"1",
 						        maxZoomLevel:"13",
-						        showNavigationControl:false
+						        showNavigationControl:false,
+						        crossOriginPolicy:true
 						    });
 			    			    
-			    			
+			    			_that.initEvents();
 			    		}
 
 			    		this.initEvents = function(){
@@ -5845,7 +6395,7 @@ var num = 1 ;
 								$canvas.bind("mousedown",{},_canvasMousedownEvent);
 								$canvas.bind("mousemove",{},_canvasMousemoveEvent);
 								$canvas.bind("mouseup",{},_canvasMouseupEvent);
-
+								
 								if(_canvas.addEventListener){
 									_canvas.addEventListener("touchstart",_canvasMousedownEvent);
 									_canvas.addEventListener("touchmove",_canvasMousemoveEvent);
@@ -5866,7 +6416,6 @@ var num = 1 ;
 				    			 		dv_annos_drawer_page.draw();
 				    			 		// viewport.setRotation(viewport.getRotation()+90)
 				    			 	}, 1000);   
-			    			 	u.log("open");
 			    			 }
 
 			    			 function _animationFinshEvent(e){
@@ -5882,8 +6431,6 @@ var num = 1 ;
 				    			 		dv_annos_drawer_page.draw();
 				    			 	}, 1000);   
 			    			 	}
-						    	u.log(e);
-						    	u.log(_viewport.getZoom());
 			    			 }
 
 			    			 function _animationEvent(e){
@@ -5909,20 +6456,11 @@ var num = 1 ;
 					var events = {},
 					_that = this;
 					function _attachEvents(){
-						/*$(function(){
-							_dvSliderIcon.draggable({ 
-					    		axis: "x",
-					    		containment: [_dvMain_layout.width()*0.1,0,_dvMain_layout.width()*0.8,0],
-					    		cursor: "col-resize",
-					    		drag: events.sliderDragEvent
-					    	});
-						})*/
-						
-						// window.addEventListener("onresize",events.initDVSize,false);
-						// window.addEventListener("onload",events.initDVSize,false);
 						_window.bind("resize",{},events.initDVSize);
 						_window.bind("load",{},events.initDVSize);
-
+						$(function(){
+							events.initDVSize();
+						});
 					}
 					(function(es){
 						es.sliderDragEvent = function( event, ui ) {
@@ -6007,7 +6545,6 @@ var num = 1 ;
 									}
 									return false;								
 								});
-								DVUtil.log(session);
 								if(session&&session.length>0){
 									dv_session = session[0];
 									dv_action_list = session[0].enabledActions.split(",");
@@ -6109,7 +6646,6 @@ var num = 1 ;
 						
 						DVUtil.callJSON("imageinfo.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"num":0,"dataType":DATA_TYPE},null,_success,_fail);
 						function _success(data){
-							DVUtil.log("imageinfo.davinci");
 							dv_image_info = data;
 							if(dv_image_info){
 								dv_annotations = dv_image_info.docObject.annotations;
@@ -6151,7 +6687,6 @@ var num = 1 ;
 				DVCompareClass = function(){
 					DVClass.prototype.constructor.call(this);
 					var _that = dv_davinci = this;
-					DVUtil.log(["dv_davinci",dv_davinci])
 					this.createCanvas = function(){
 						dv_canvas_compare =  new DVCompareCanvaClass();
 					}
