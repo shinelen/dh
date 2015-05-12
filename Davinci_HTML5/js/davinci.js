@@ -106,6 +106,7 @@
 		    	DVFullScreenClass,
 		    	DVToggleAnnoClass,
 		    	DVToolAnnoClass,
+		    	DVMoveAnnoClass,
 		    	DVMeasureClass,
 		    	DVDensitometerClass,
 		    	DVPreferenceClass,
@@ -1565,7 +1566,7 @@
 		    			}
 
 		    			this.draw = function(){
-// 		    				_clearAnnos();
+//  		    				_that.clearAnnos();
 		    			 	for(var i=0;i<_annotationList.length;i++){
 		    			 		_annotationList[i].draw();
 		    			 	}		    			 	
@@ -1586,7 +1587,7 @@
 		    				}
 		    				return null;
 		    			}
-		    			function _clearAnnos(){
+		    			this.clearAnnos = function(){
 		    				if(viewer === dv_viewer){
 		    					_context.putImageData(dv_image_data, 0, 0);
 		    				}else if(viewer === dv_viewer1){
@@ -1665,9 +1666,13 @@
 	    			 	_showAnnoView = false,
 	    			 	_jq_anno_view,_jq_anno_text,_jq_anno_save,_jq_anno_cancel,
 	    			 	_jq_anno,
+	    			 	_jq_move_point,
 	    			 	_vpoint,
 	    			 	_dvCanvas,_page,
 	    			 	anno_drawer,
+	    			 	_is_move = true,
+	    			 	lX = 0,
+						lY = 0,
 	    			 	_num;
 	    			 	this.rotation = 0;
 	    			 	this.annoShapeImagedata = null;
@@ -1699,18 +1704,17 @@
 	    			 	}
 		    			this.draw = function(){
 		    				var s = DVUtil.getCurrentStatus(),
-	    			 		ratateBtn = DVToolbar.Toolbar.getDVRotate(),
-	    			 		lX = 0,
-	    			 		lY = 0;
+	    			 		ratateBtn = DVToolbar.Toolbar.getDVRotate();
+	    			 		
 	    			 		_that.rotation = ratateBtn.getRotation();
 		    				if(viewer==dv_viewer){
-								anno_drawer = dv_annos_drawer;
+								_that.anno_drawer = anno_drawer = dv_annos_drawer;
 							}else if(viewer==dv_viewer1){
-								anno_drawer = dv_annos_drawer1;
+								_that.anno_drawer = anno_drawer = dv_annos_drawer1;
 							}else if(viewer==dv_viewer2){
-								anno_drawer = dv_annos_drawer2;
+								_that.anno_drawer = anno_drawer = dv_annos_drawer2;
 							}else if(viewer==dv_viewer_page){
-								anno_drawer = dv_annos_drawer_page;
+								_that.anno_drawer = anno_drawer = dv_annos_drawer_page;
 							}
 
 
@@ -1764,9 +1768,11 @@
 		    				point = DVDrawerUtil.dvToViewportCor(_anno.sceneX,_anno.sceneY,_that.num),
 	    			 		opoint = new OpenSeadragon.Point(point.x,point.y),
 					        vpoint = _vpoint = _viewport.imageToViewerElementCoordinates( opoint ),	
+					        isMove = false,
 	    			 		text = _context.measureText(_anno.progressiveId);
 	    			 		lX = 0;
 	    			 		lY = 0;
+	    			 		
 	    			 		switch(_that.rotation){
 	    			 			case 180:
 	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
@@ -1791,17 +1797,74 @@
 		    			 	
 
 
+							
 		    			 	if(!_jq_anno){
-		    					_jq_anno = eu.div("dv-annotation")
+		    					_jq_anno = eu.div("dv-annotation");
 		    					_dvCanvas.append(_jq_anno);
-		    					_jq_anno.bind("click",{},_jqAnnoClickEvent);
+		    					_jq_anno
+		    					.bind("click",{},_jqAnnoClickEvent);
+
+		    					_that.rotation = 0;
+								function downEvent(e){
+									_is_move = DVToolbar.Toolbar.getDVMoveAnno().isActive;
+									if(_is_move){
+										_that.rotation = DVToolbar.Toolbar.getDVRotate().getRotation();
+										DVUtil.stopEvent(e);
+										isMove = true;
+										_anno.oldX = _anno.sceneX;
+	    			 					_anno.oldY = _anno.sceneY;
+										_that.anno_drawer.clearAnnos();
+									}else{
+										isMove = false;
+									}
+
+								}
+								function moveEvent(e){
+									if(_is_move){
+										DVUtil.stopEvent(e);
+										if(isMove){
+
+											_that.moveAnno(e);
+
+										}
+									}else{
+										isMove = false;
+									}
+								}
+								function upEvent(e){
+									if(_is_move){
+										DVUtil.stopEvent(e);
+										isMove = false;
+										_that.saveMoveAnno(e);
+										_that.saveMoveShape(e);
+									}else{
+										isMove = false;
+									}
+								}
+
+		    					_jq_anno
+								.bind("mousedown",downEvent)
+								.bind("mousemove",moveEvent)
+								.bind("mouseup",upEvent);
+
+								if(_jq_anno.get(0).addEventListener){
+									_jq_anno.get(0).addEventListener("touchstart",downEvent);
+									_jq_anno.get(0).addEventListener("touchmove",moveEvent);
+									_jq_anno.get(0).addEventListener("touchend",upEvent);
+								}
 		    				}
-		    				_jq_anno.css({
+
+		    				_jq_anno
+		    				.css({
 		    					"background-color":_anno_bg_color,
 		    					"border":"1px solid "+_anno_border_color,
 		    					"left":lX-10+"px",
 		    					"top":lY-12+"px"
-		    				}).text(_anno.progressiveId);
+		    				})
+		    				.data({"ox":lX-10,"oy":lY-12})
+		    				.text(_anno.progressiveId);
+
+							
 
 		    			}
 
@@ -1809,7 +1872,9 @@
 		    				if(!_jq_anno_view){
 		    					_jq_anno_view = eu.div("dv-annotation-view");
 		    					_jq_anno_view.css({"background-color":_anno_bg_color});
-		    					
+
+		    					//_jq_move_point = eu.div("glyphicon glyphicon-move");
+
 		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok",null,{
 		    						"font-size":"20px",
 		    						"cursor":"pointer",
@@ -1938,7 +2003,59 @@
 							},null,_success,_fail);
 		    				}
 		    			}
-		    			this.move = function(){}
+		    			this.moveAnno = function(e){
+		    				_viewport.update();
+		    				var x = e.clientX,
+							y = e.clientY,
+							ox = _jq_anno.data("ox"),
+							oy = _jq_anno.data("oy"),
+							mx = x-15,
+							my = y-12-55,
+							lx = mx+15,
+							ly = my+12,
+							ipont = {},
+							sencePoint;						
+							
+							switch(_that.rotation){
+								case 180:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lx = 2*center.x-vpoint_mouseup.x;
+									ly = 2*center.y-vpoint_mouseup.y+Math.abs(vpoint_mouseup.y-y);
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
+								break;
+								case 270:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lx = center.y+center.x-vpoint_mouseup.y;
+									ly = vpoint_mouseup.x+center.y-center.x+Math.abs(vpoint_mouseup.y-y);
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
+								break;
+								case 90:
+									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+									lx = center.x-center.y+vpoint_mouseup.y;
+									ly = center.y+center.x-vpoint_mouseup.x+Math.abs(vpoint_mouseup.y-y);
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
+								break;
+								default:
+									//lx = ipoint_mouseup.x;
+									//ly = ipoint_mouseup.y;
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,y) );
+								break;
+							}
+							sencePoint = DVDrawerUtil.dvToImageCor(ipont.x,ipont.y);
+							_anno.sceneX = sencePoint.x;
+							_anno.sceneY = sencePoint.y;
+
+							_that.moveShape(e);
+
+							_that.anno_drawer.clearAnnos();
+							_that.anno_drawer.draw();
+
+		    			}
+		    			this.saveMoveAnno = function(e){
+		    				
+		    			}
+		    			this.moveShape = function(e){}
+		    			this.saveMoveShape = function(e){}
 		    			this.open = function(){
 		    				_showAnnoView = true;
 		    				_jq_anno_view?_jq_anno_view.show():null;
@@ -1949,6 +2066,9 @@
 		    				_jq_anno_view?_jq_anno_view.hide():null;
 		    			}
 		    			function _jqAnnoClickEvent(){
+		    				if(_is_move){
+		    					return;
+		    				}
 		    				if(_showAnnoView){
 		    					_jq_anno_view?_jq_anno_view.hide():null;
 		    				}else{
@@ -2018,6 +2138,22 @@
 	    			 	_viewport = _viewer.viewport,
 		    			_anno = anno,
 		    			_shape;
+		    			this.moveShape = function(e){
+		    				var stype = _anno.shape.type,
+		    				stypes = stype.split(" "),
+		    				sx = 0,sy = 0;
+		    				if(stypes&&stypes.length>4){
+		    					//sx = stypes[2];
+		    					//sy = stypes[3];
+		    					stypes[2] = parseFloat(stypes[2]) - (_anno.sceneX-_anno.oldX);
+		    					stypes[3] = parseFloat(stypes[3]) - (_anno.sceneY-_anno.oldY);
+		    				}
+		    				_anno.oldShape = _anno.shape;
+		    				_anno.shape.type = stypes.join(" ")
+
+							console.log(_anno);
+		    			}
+		    			this.saveMoveShape = function(e){}
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
@@ -2954,6 +3090,7 @@
 			    			_DVFullScreenClass,
 			    			_DVToggleAnnoClass,
 			    			_DVToolAnnoClass,
+			    			_DVMoveAnnoClass,
 			    			_DVMeasureClass,
 			    			_DVDensitometerClass,
 			    			_DVDVPreferenceClass,
@@ -3014,6 +3151,8 @@
 		    				if(DVUtil.chkAction("Post it Note")){
 		    					_DVToolAnnoClass = new DVToolAnnoClass();
 		    					_toolbarBtnlist.push(_DVToolAnnoClass);
+		    					_DVMoveAnnoClass = new DVMoveAnnoClass();
+		    					_toolbarBtnlist.push(_DVMoveAnnoClass);
 		    				}
 
 		    				if(DVUtil.chkAction("Measurement")){
@@ -3178,6 +3317,10 @@
 
 		    			this.getDVToggleAnno = function(){
 		    				return _DVToggleAnnoClass;
+		    			}
+		    			
+		    			this.getDVMoveAnno = function(){
+		    				return _DVMoveAnnoClass;
 		    			}
 
 		    			this.getDVToolAnno = function(){
@@ -3699,17 +3842,65 @@
 							}
 
 			    			if(_isshow){
+			    				_that.getElement().removeClass("active");
 								for(var i=0;i<annolist.length;i++){
 									dv_anno_class_list[annolist[i].acid].close();
 								}
 			    			}else{
-
+			    				_that.getElement().addClass("active");
 								for(var i=0;i<annolist.length;i++){
 									dv_anno_class_list[annolist[i].acid].open();
 								}
 			    			}
 			    			_isshow = !_isshow;
 
+			    		}
+
+			    		this.initEvents = function(){
+			    			_that.getElement().bind("click",{},_clickEvent)
+			    		}
+		    		}
+			    	
+			    	DVMoveAnnoClass = function(){
+			    		DVToolBtnClass.prototype.constructor.call(this);
+			    		var _that = this;
+			    		this.btnICON = ICON_ANNOTATION,
+			    		_that.isActive = false;
+			    		this.createElement = function(){
+			    			var _element = eu.li(),
+			    			_a = eu.a(),
+			    			_img = eu.img(null,{"src":_that.btnICON});
+			    			_a.append(_img)
+			    			.append(
+			    					eu.div("glyphicon glyphicon-move",null,{
+			    						"color":"#5E95D5",
+			    						"font-size":"5px"
+			    					})
+			    			);
+			    			_element.append(_a);
+			    			return _element;
+			    		}
+			    		function _clickEvent(e){
+			    			var s = DVUtil.getCurrentStatus();
+
+			    			if(_that.isActive){
+			    				_that.cancel();
+			    			}else{
+			    				_that.active();
+			    			}
+//			    			_that.isActive = !_that.isActive;
+
+			    		}
+			    		this.active = function(){
+			    			DVToolbar.Toolbar.getDVToolAnno().cancel();
+			    			_that.getElement().addClass("active");
+			    			_that.isActive = true;
+			    			$(".dv-annotation").css({"cursor":"move"});
+			    		}
+			    		this.cancel = function(){
+			    			_that.getElement().removeClass("active");
+			    			_that.isActive = false;
+			    			$(".dv-annotation").css({"cursor":"default"});
 			    		}
 
 			    		this.initEvents = function(){
@@ -3815,6 +4006,7 @@
 			    				_dropdownValBtn.addClass("active");
 			    				_selFromDropdown = false;
 			    				dv_toolbar_action = _selectedAnno;
+			    				DVToolbar.Toolbar.getDVMoveAnno().cancel();
 			    				switch(_selectedAnno){
 			    					case TOOL_ANNO:
 			    						
@@ -4499,6 +4691,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 				DVUtil.extend(DVToolBtnClass,DVFitWinClass);
 				DVUtil.extend(DVToolBtnClass,DVFullScreenClass);
 				DVUtil.extend(DVToolBtnClass,DVToggleAnnoClass);
+				DVUtil.extend(DVToolBtnClass,DVMoveAnnoClass);
 				DVUtil.extend(DVToolBtnClass,DVToolAnnoClass);
 				DVUtil.extend(DVToolBtnClass,DVMeasureClass);
 				DVUtil.extend(DVToolBtnClass,DVDensitometerClass);
@@ -5229,6 +5422,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
       						y = e.y || e.offsetY,
       						_canvas = viewer.drawer.canvas,
       						_context = viewer.drawer.context,
+      						lX=0,lY=0,
       						_viewport = viewer.viewport;
       						_freehand_path = [];
       						_freehand_cpath = [];
@@ -5250,7 +5444,34 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 	    			 			_mousedownOffsetY = y;
 	    			 			_mousedownClientX = e.clientX || e.targetTouches[0].clientX;
 	    			 			_mousedownClientY = e.clientY || e.targetTouches[0].clientY;
-	    			 			_vpoint_mousedown = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) )
+	    			 			//_vpoint_mousedown = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) );
+	    			 			var vpoint_mousedown = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) ));
+	    			 			switch(_that.rotation){
+									case 180:
+										var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+										lX = 2*center.x-vpoint_mousedown.x;
+										lY = 2*center.y-vpoint_mousedown.y+Math.abs(_mousedownClientY-y);
+										_vpoint_mousedown = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+									break;
+									case 270:
+										var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+										lX = center.y+center.x-vpoint_mousedown.y;
+										lY = vpoint_mousedown.x+center.y-center.x+Math.abs(_mousedownClientY-y);
+										_vpoint_mousedown = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+									break;
+									case 90:
+										var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+										lX = center.x-center.y+vpoint_mousedown.y;
+										lY = center.y+center.x-vpoint_mousedown.x+Math.abs(_mousedownClientY-y);
+										_vpoint_mousedown = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+									break;
+									default:
+// 										lX = ipoint_mouseup.x;
+// 										lY = ipoint_mouseup.y;
+										_vpoint_mousedown  = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) );
+									break;
+								}
+
 	    			 			_dragging = true;
 	    			 			viewer.setMouseNavEnabled(false);
 	    			 		}else{	    			 			
@@ -5446,8 +5667,32 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 		    			 			_y = _mousedownClientY>y ? y :_mousedownClientY,
 		    			 			opoint = new OpenSeadragon.Point(_x,_y),
 		    			 			vpoint = _viewport.windowToImageCoordinates( opoint ),		    			 			
-		    			 			vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) ),
-		    			 			vpoint_wh = {w:(Math.abs(vpoint_mouseup.x - _vpoint_mousedown.x)),h:(Math.abs(vpoint_mouseup.y - _vpoint_mousedown.y))},
+		    			 			vpoint_mouseup,
+		    			 			vpoint_mouseup_zoom = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(x,y) ));
+		    			 			switch(_that.rotation){
+										case 180:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = 2*center.x-vpoint_mouseup_zoom.x;
+											lY = 2*center.y-vpoint_mouseup_zoom.y+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 270:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.y+center.x-vpoint_mouseup_zoom.y;
+											lY = vpoint_mouseup_zoom.x+center.y-center.x+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 90:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.x-center.y+vpoint_mouseup_zoom.y;
+											lY = center.y+center.x-vpoint_mouseup_zoom.x+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										default:
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) );
+										break;
+									}
+		    			 			var vpoint_wh = {w:(Math.abs(vpoint_mouseup.x - _vpoint_mousedown.x)),h:(Math.abs(vpoint_mouseup.y - _vpoint_mousedown.y))},
 		    			 			page_info = _getPageInfo(viewer),
 		    			 			pw = page_info.originalWidthPx,
 		    			 			ph = page_info.originalHeightPx,
@@ -5574,82 +5819,95 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 		    			 			}
 		    			 			if(dv_toolbar_action==TOOL_ANNO){
 			    			 													
-									_anno = new DVNormalAnnoClass(viewer,annotaion);
-									_anno.draw();
-			    			 		}else if(dv_toolbar_action==TOOL_ANNO_RECT){
+										_anno = new DVNormalAnnoClass(viewer,annotaion);
+										_anno.draw();
 
-					    				var start_vpoint = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) ),
-					    				start_point = DVDrawerUtil.dvToImageCor(start_vpoint.x,start_vpoint.y),
-					    				end_point = sencePoint,
-					    				w = end_point.x-start_point.x,
-					    				h = end_point.y-start_point.y;
-
-
-					    				annotaion.shape.color = draw_color10;
-					    				annotaion.shape.type = ANNO_RECT+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h;
-
-					    				_context.putImageData(_orgImgdata,0,0);
-					    				
-
-			    			 			_anno = new DVRectangleAnnoClass(viewer,annotaion);
-			    			 			_anno.draw();
-			    			 		}else if(dv_toolbar_action==TOOL_ANNO_ECLIPSE){
-
+			    			 		}else {
 			    			 			var start_vpoint = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) ),
-					    				start_point = DVDrawerUtil.dvToImageCor(start_vpoint.x,start_vpoint.y),
-					    				end_point = sencePoint,
-					    				w = end_point.x-start_point.x,
-					    				h = end_point.y-start_point.y;
+											start_point = DVDrawerUtil.dvToImageCor(_vpoint_mousedown.x,_vpoint_mousedown.y),
+											end_point = sencePoint,
+											w = end_point.x-start_point.x,
+											h = end_point.y-start_point.y;
 
-					    				annotaion.shape.color = draw_color10;
-					    				annotaion.shape.type = ANNO_ECLIPSE+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h;
-					    				annotaion.sceneX = start_point.x + w/2;
-					    				_context.putImageData(_orgImgdata,0,0);
 
-			    			 			_anno = new DVCircleAnnoClass(viewer,annotaion);
-			    			 			_anno.draw();
-			    			 		}else if(dv_toolbar_action==TOOL_ANNO_FREEHAND){
-			    			 			_anno = new DVFreehandAnnoClass(viewer,annotaion);
-			    			 			var start_vpoint = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) ),
-					    				start_point = DVDrawerUtil.dvToImageCor(start_vpoint.x,start_vpoint.y),
-					    				end_point = sencePoint,
-					    				w = end_point.x-start_point.x,
-					    				h = end_point.y-start_point.y,
-					    				path = "M 0 0 ";
-					    				for(var i=0;i<_freehand_cpath.length;i++){
-					    					var pathVCor = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_freehand_cpath[i][0],_freehand_cpath[i][1]) ),
-					    					pathCor = DVDrawerUtil.dvToImageCor(pathVCor.x,pathVCor.y);
-					    					path +="L "+(parseFloat(pathCor.x) - parseFloat(start_point.x))+" "+(parseFloat(pathCor.y) - parseFloat(start_point.y))+" ";
-					    				}
-					    				annotaion.sceneX = start_point.x;
-					    				annotaion.sceneY = start_point.y;
-					    				annotaion.shape.color = draw_color10;
-					    				annotaion.shape.type = ANNO_FREEHAND+" 1 "+start_point.x+" "+start_point.y+" 0 0 "+path;
 
-					    				_context.putImageData(_orgImgdata,0,0);
-					    									    				
-			    			 			_anno = new DVFreehandAnnoClass(viewer,annotaion);
-			    			 			_anno.draw();
-			    			 			
-			    			 		}else if(dv_toolbar_action==TOOL_ANNO_ARROW){
-			    			 			_anno = new DVArrowAnnoClass(viewer,annotaion);
-			    			 			var start_vpoint = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_mousedownClientX,_mousedownClientY) ),
-					    				start_point = DVDrawerUtil.dvToImageCor(start_vpoint.x,start_vpoint.y),
-					    				end_point = sencePoint,
-					    				w = end_point.x-start_point.x,
-					    				h = end_point.y-start_point.y;
+										if(dv_toolbar_action==TOOL_ANNO_RECT){
 
-					    				annotaion.sceneX = start_point.x;
-					    				annotaion.sceneY = start_point.y;
-					    				annotaion.shape.color = draw_color10;
-					    				annotaion.shape.type = ANNO_ARROW+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h+" 0 0 0 0";
+											annotaion.shape.color = draw_color10;
+											annotaion.shape.type = ANNO_RECT+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h;
 
-					    				_context.putImageData(_orgImgdata,0,0);
-					    				
+											_context.putImageData(_orgImgdata,0,0);
 
-			    			 			_anno = new DVArrowAnnoClass(viewer,annotaion);
-			    			 			_anno.draw();  			
+											_anno = new DVRectangleAnnoClass(viewer,annotaion);
+											_anno.draw();
+										}else if(dv_toolbar_action==TOOL_ANNO_ECLIPSE){
+
+											annotaion.shape.color = draw_color10;
+											annotaion.shape.type = ANNO_ECLIPSE+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h;
+											annotaion.sceneX = start_point.x + w/2;
+											_context.putImageData(_orgImgdata,0,0);
+
+											_anno = new DVCircleAnnoClass(viewer,annotaion);
+											_anno.draw();
+										}else if(dv_toolbar_action==TOOL_ANNO_FREEHAND){
+											_anno = new DVFreehandAnnoClass(viewer,annotaion);
+											var path = "M 0 0 ";
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											for(var i=0;i<_freehand_cpath.length;i++){
+												var pathVCor,pathCor,lX=0,lY=0,
+												vpoint_mousemove = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(_freehand_cpath[i][0],_freehand_cpath[i][1]) ));
+
+												switch(_that.rotation){
+													case 180:														
+														lX = 2*center.x-vpoint_mousemove.x;
+														lY = 2*center.y-vpoint_mousemove.y+Math.abs(vpoint_mouseup.y-y);
+														pathVCor = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+													break;
+													case 270:
+														lX = center.y+center.x-vpoint_mousemove.y;
+														lY = vpoint_mousemove.x+center.y-center.x+Math.abs(vpoint_mouseup.y-y);
+														pathVCor = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+													break;
+													case 90:
+														lX = center.x-center.y+vpoint_mousemove.y;
+														lY = center.y+center.x-vpoint_mousemove.x+Math.abs(vpoint_mouseup.y-y);
+														pathVCor = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+													break;
+													default:
+														pathVCor = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(_freehand_cpath[i][0],_freehand_cpath[i][1]) )
+													break;
+												}
+												
+												pathCor = DVDrawerUtil.dvToImageCor(pathVCor.x,pathVCor.y);
+												path +="L "+(parseFloat(pathCor.x) - parseFloat(start_point.x))+" "+(parseFloat(pathCor.y) - parseFloat(start_point.y))+" ";
+											}
+											annotaion.sceneX = start_point.x;
+											annotaion.sceneY = start_point.y;
+											annotaion.shape.color = draw_color10;
+											annotaion.shape.type = ANNO_FREEHAND+" 1 "+start_point.x+" "+start_point.y+" 0 0 "+path;
+
+											_context.putImageData(_orgImgdata,0,0);
+
+											_anno = new DVFreehandAnnoClass(viewer,annotaion);
+											_anno.draw();
+
+										}else if(dv_toolbar_action==TOOL_ANNO_ARROW){
+											_anno = new DVArrowAnnoClass(viewer,annotaion);
+											
+
+											annotaion.sceneX = start_point.x;
+											annotaion.sceneY = start_point.y;
+											annotaion.shape.color = draw_color10;
+											annotaion.shape.type = ANNO_ARROW+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h+" 0 0 0 0";
+
+											_context.putImageData(_orgImgdata,0,0);
+
+
+											_anno = new DVArrowAnnoClass(viewer,annotaion);
+											_anno.draw();  			
+										}
 			    			 		}
+
 			    			 		// _annotationList.push(_anno);
 			    			 		if(viewer==dv_viewer){
 		      							anno_drawer = dv_annos_drawer;

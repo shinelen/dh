@@ -185,6 +185,7 @@ html,body{
 	.gicon:hover{
 		color:#8F9088;
 	}
+	
 	.dv-annotation-view{
 		position: absolute;
 		width: 235px;
@@ -248,6 +249,7 @@ html,body{
 		-ms-user-select: none !important;
 		user-select: none !important;
 	}
+	
 	.dvListTab table div{
 		overflow: hidden; 
 		word-break: normal; 
