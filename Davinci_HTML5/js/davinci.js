@@ -167,6 +167,7 @@
 			//Share Data
 			_dvClientType,
 			
+			dv_move_anno,
 			dv_brand = "",
 			dv_toolbar,
 			dv_bottom_toolbar,
@@ -268,25 +269,34 @@
 			TOOL_ANNO_RECT = "anno rect",
 			TOOL_ANNO_ARROW = "anno arrow",
 			TOOL_ANNO_FREEHAND = "anno freehand",
+			TOOL_MOVE_ANNO = "move anno",
 			TOOL_RULER = "ruler",
 			TOOL_DENSITOMETER = "densitometer",
+			TOOL_MEASURE = "measure",
 
 			ANNO_ECLIPSE = "ellipse",
 			ANNO_ARROW = "arrow",
 			ANNO_RECT = "rectangle",
 			ANNO_FREEHAND = "freehand",
 
-			ANNO_ACTION_LOAD = "load",
-			ANNO_ACTION_ADD = "annotate",
-			ANNO_ACTION_DEL = "annodel",
-			ANNO_ACTION_EDIT = "edit",
-			ANNO_ACTION_COMMEDIT = "actionCommentEdit",
-			ANNO_ACTION_CHK = "annocheck",
+                ANNO_ACTION_LOAD = "load",
+                ANNO_ACTION_ADD = "annotate",
+                ANNO_ACTION_DEL = "annodel",
+                ANNO_ACTION_EDIT = "edit",
+                ANNO_ACTION_COMMEDIT = "actionCommentEdit",
+                ANNO_ACTION_CHK = "annocheck",
+                
+                ATTACHFILE_ACTION_UPLOAD = "u",
+                ATTACHFILE_ACTION_DOWNLOAD = "d",
+                ATTACHFILE_ACTION_READ = "r",
 
 			ANNO_WIDTH = 25,
 		 	ANNO_HEIGHT = 20,
 		 	ANNO_ROUND = 4,
 		 	ANNO_ALPHA = 0.8,
+		 	
+		 	ERROR_COLOR_STROKE = "#D21E22",
+			ERROR_COLOR_FILL = "#EF7F79",
 
 		 	PC = "PC",
 			MOBILE = "mobile",
@@ -296,10 +306,10 @@
 			IE = "ie",
 			CHROME = "chrome",
 			
-			ICON_PAGE_SINGLE = "css/icons/page1.gif";
-			ICON_PAGE_COMPARE = "css/icons/page2.gif";
-			ICON_PAGE_PREPAGE = "css/icons/prevPage.png";
-			ICON_PAGE_NEXTPAGE = "css/icons/nextPage.png";
+			ICON_PAGE_SINGLE = "css/icons/page1.gif",
+			ICON_PAGE_COMPARE = "css/icons/page2.gif",
+			ICON_PAGE_PREPAGE = "css/icons/prevPage.png",
+			ICON_PAGE_NEXTPAGE = "css/icons/nextPage.png",
 
 			SERIAL_NUMBER = "DV-"+Math.ceil(Math.random()*1000000000000),
 			AJAX_ROOT_URL = "http://116.6.193.202:88/DVhtml5",
@@ -309,8 +319,13 @@
 			BRAND_COMPARE = "Davinci Compare",
 			BRAND_VIDEO = "Davinci Video",
 			VERSION  = "v1.0",
-			PUBLIC_CONFIGS = $.extend(dv_config_default,configArguments);
+			PUBLIC_CONFIGS = $.extend(dv_config_default,configArguments),
 			
+
+			//anno color and drawing color array.
+			ANNO_COLOR_ARRAY = ["F2A3A7","33FF66","DBEEF3","EEEEEE","999999","EDF881","CCFFFF","FFCCFF","FFCC00","999966"],
+			ANNO_DRAW_COLOR_ARRAY = ["000001","666666","FF0000","00FF00","0000FF","FFFF00","00FFFF","FF00FF","FFCC00","660099"];
+
 			/**
 			 * 封装常用的方法和控件
 			 * @param  {[type]} eu [description]
@@ -322,6 +337,9 @@
 					ele = attrs ? ele.attr(attrs) : ele;
 					ele = csses ? ele.css(csses) : ele;
 				}
+                eu.getElById = function(elid){
+                    return $("#" + elid);
+                }
 				eu.div = function(cssclass,attrs,csses){
 					var div = $("<div>");
 					_addPara2Ele(div,cssclass,attrs,csses);
@@ -430,6 +448,11 @@
 				eu.progress = function(csses){
 					return new progress(csses);
 				}
+				eu.colorSelector = function(attrs,csses,colorArr){
+					return new colorSelector(attrs,csses,colorArr);
+				}
+
+
 				function progress(csses){
 					var _this=this,
 					_jq_progress,_jq_progress_bar;
@@ -471,6 +494,54 @@
 					}
 					this.init();
 				}
+
+				function colorSelector(attrs,csses,colorArr){
+					var _this = this,
+						_jq_btn_group;
+					function _initElement(){
+						_jq_btn_group = eu.div("btn-group btn-group-sm",{
+							"role":"group"
+						});
+						attrs = attrs?_jq_btn_group.attr(attrs).attr("data-color","null"):_jq_btn_group.attr("data-color","null");
+						csses = csses?_jq_btn_group.css(csses):"";
+						if(colorArr.length==0){
+							DVUtil.error("color array length error");
+						} else {
+							for (var i = 0; i < colorArr.length; i++) {
+								var color = colorArr[i];
+								var color_btn = eu.button("btn btn-"+color,"{data-id:color-"+color+"}").html("&nbsp;");
+								color_btn.bind('click', function(event) {
+									/* Act on the event */
+									var id = $(this).attr("data-id");
+									var color = id.substring(2,id.length);
+									_this.setColor(color);
+								});
+
+								_jq_btn_group.append(color_btn);
+							};
+						}
+
+					}
+
+					this.init = function(){
+						_initElement();
+					}
+
+					this.getElement = function(){
+						return _jq_btn_group;
+					}
+
+
+
+					this.setColor = function(color){
+						_jq_btn_group.attr("data-color",color).find("button[data-id=color-"+color+"]").addClass("selected-color").siblings("button").removeClass("selected-color");
+					}
+
+					this.getColor = function(){
+						return _jq_btn_group.attr("data-color");
+					}
+					this.init();
+				}
 				/**
 				 *  封装了boostrap的modal控件（即dialog）
 				 *  此方法为打开控件
@@ -479,7 +550,7 @@
 				 * @param  {[type]} footer  [description]
 				 * @return {[type]}         [description]
 				 */
-				eu.openDialog = function(id,content,footer){
+				eu.openDialog = function(id,content,footer, closeMode){
 					var dialog;
 					dialog = new _dialogClass({
 						id:id,
@@ -489,7 +560,9 @@
 						content:content,
 						footer:footer,
 						title:"Modal title",
-						closeMode:true
+						closeMode:closeMode != null ? closeMode:true,
+                        backdrop:closeMode != null ? closeMode:true,
+                        keyboard:closeMode != null ? closeMode:true
 					});
 					return dialog;
 				}
@@ -658,7 +731,9 @@
 						content:null,
 						footer:null,
 						title:"Modal title",
-						closeMode:true
+						closeMode:true,
+			                        backdrop:true,
+			                        keyboard:true
 					},
 					_config = $.extend(_config_default,config),
 					_that = this;
@@ -669,7 +744,9 @@
 							tabindex:_config.tabindex,
 							role:"dialog",
 							"aria-labelledby":_config.aria_labelledby,
-							"aria-hidden":_config.aria_hidden
+							"aria-hidden":_config.aria_hidden,
+				                        "data-backdrop":_config.backdrop,
+				                        "data-keyboard":_config.keyboard
 						});
 						_close_btn = eu.button("close",{"button":"button","data-dismiss":"modal"})
 							.append(
@@ -779,8 +856,14 @@
 		    		}
 		    		u.getNum = function(){
 		    			var num = 0;
-						if(dv_brand==BRAND_COMPARE&&dv_current_num&&dv_current_num.length==1&&dv_current_num[0]==2){
-							num = 1;
+						if(dv_brand==BRAND_COMPARE){
+							if(dv_current_num){
+								if(dv_current_num.length==1&&dv_current_num[0]==2){
+									num = 1;
+								}else if(dv_current_num.length==3){
+									num = 1;
+								}
+							}
 						}
 
 						return num;
@@ -1276,6 +1359,7 @@
 					d.drawEllipse = function(context, x, y, a, b,color,num){
 						color = color?color:"#000000";
 					   var step = (a > b) ? 1 / a : 1 / b;
+					   context.save();
 					   context.beginPath();
 					   context.strokeStyle=color;
 					   context.moveTo(x + a, y); 
@@ -1285,10 +1369,11 @@
 					   }
 					   context.closePath();
 					   context.stroke();
+					   context.restore();
 					   return context;
 					};
 
-					d.drawArrow = function(viewport,context,shape,rotation,num){
+					d.drawArrow = function(viewport,context,shape,rotation,num,errorcolor){
 						var shape_point = d.dvToViewportCor(shape.x,shape.y,num),
 						center = viewport.viewportToViewerElementCoordinates(viewport.getCenter(true)),
 	    				shape_point2 = DVDrawerUtil.dvToViewportCor(
@@ -1304,7 +1389,7 @@
 						slopy = Math.atan2(-lY,-lX),
 						cosy = Math.cos(slopy),
 						siny = Math.sin(slopy),
-	    				color = d.toColor(shape.color),
+	    				color = errorcolor?errorcolor:d.toColor(shape.color),
 	    				shape_point3 = DVDrawerUtil.dvToViewportCor(
 	    					Math.abs(parseFloat(shape.x)+parseFloat(lX + ( Par * cosy - ( Par / 2.0 * siny )))),
 	    					Math.abs(parseFloat(shape.y)+parseFloat(lY + ( Par * siny + ( Par / 2.0 * cosy )))),
@@ -1318,6 +1403,7 @@
 	    				shape_vpoint3 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point3 )),
 	    				shape_vpoint4 = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point4 ));
 
+	    				context.save();
 	    				context.beginPath();
 	    				context.strokeStyle=color;
 	    				context.fillStyle=color;
@@ -1329,19 +1415,21 @@
 						context.closePath();
 						context.fill();
 						context.stroke();
+						context.restore();
 
 
 						return context;
 					}
 
-					d.drawFreehand = function(viewport,context,shape,rotation,num){
+					d.drawFreehand = function(viewport,context,shape,rotation,num,errorcolor){
 						var shape_point = d.dvToViewportCor(shape.x,shape.y,num),
 						center = viewport.viewportToViewerElementCoordinates(viewport.getCenter(true)),
 						shapeData = shape.data,
 		    				shape_vpoint = d.getRotationCor(rotation,center,viewport.imageToViewerElementCoordinates( shape_point )),
-		    				color = d.toColor(shape.color),
+		    				color = errorcolor?errorcolor:d.toColor(shape.color),
 		    				index = 3;
 
+		    				context.save();
 		    				context.beginPath();
 		    				context.strokeStyle=color;
 						context.moveTo(shape_vpoint.x,shape_vpoint.y);
@@ -1361,17 +1449,20 @@
 							
 						}
 						context.stroke();
+						context.restore();
 
 						return context;
 					}
 
 					d.drawRect = function(context,x, y, w, h,color){
-						color = color?color:"#000000";
+						color = (color&&color!="#1")?color:"#000000";
+						context.save();
 						context.beginPath();
 						context.strokeStyle=color;
 						context.rect(x, y, w, h);
 						context.stroke();
 						// context.fill();
+						context.restore();
 						return context;
 					}
 					d.getRotationCor = function(rotation,center,point){
@@ -1602,7 +1693,7 @@
 
 		    			}
 		    			this.updAnnoList = function(num,callback){
-		    				num  = num || DVUtil.getNum();
+		    				num  = typeof num == "number"?num:DVUtil.getNum();
 		    				function _success(data){
 		    					data = data?data:[];
 		    					_that.initAnnoList(data);
@@ -1654,6 +1745,7 @@
 	    			 	_context = _drawer.context,
 	    			 	_viewport = _viewer.viewport,
 	    			 	_anno = anno,
+//                        _anno_children = [],
 	    			 	_anno_bg_color = "rgba(234, 236, 223,0.7)",
 	    			 	_anno_border_color = "#EAECDF",
 	    			 	_anno_font_color = "#000000",
@@ -1664,19 +1756,30 @@
 	    			 	ANNO_FONT_HEIGHT = 3,
 	    			 	_acid = _anno.acid,
 	    			 	_showAnnoView = false,
-	    			 	_jq_anno_view,_jq_anno_text,_jq_anno_save,_jq_anno_cancel,
+	    			 	_jq_anno_view,_jq_anno_panel_layout,_jq_anno_text,_jq_anno_save,_jq_anno_cancel,
+                        //富文本编辑器
+                        _jq_anno_richeditor_btn,
+                        //关闭按钮
+                        _jq_anno_close_btn,
+                        //编辑按钮
+                        _jq_anno_edit_btn,
+                        //子anno按钮
+                        _jq_anno_child_btn,
+                        //附件上传按钮
+                        _jq_anno_upload_btn,
 	    			 	_jq_anno,
 	    			 	_jq_move_point,
 	    			 	_vpoint,
 	    			 	_dvCanvas,_page,
 	    			 	anno_drawer,
 	    			 	_is_move = true,
+	    			 	isMove = false,
 	    			 	lX = 0,
-						lY = 0,
+					lY = 0,
 	    			 	_num;
 	    			 	this.rotation = 0;
 	    			 	this.annoShapeImagedata = null;
-	    			 	
+	    			 	this.restoreMoveAnno = false;
 	    			 	
 
 
@@ -1709,12 +1812,16 @@
 	    			 		_that.rotation = ratateBtn.getRotation();
 		    				if(viewer==dv_viewer){
 								_that.anno_drawer = anno_drawer = dv_annos_drawer;
+								_that.page_info = dv_page_info;
 							}else if(viewer==dv_viewer1){
 								_that.anno_drawer = anno_drawer = dv_annos_drawer1;
+								_that.page_info = dv_page_info1;
 							}else if(viewer==dv_viewer2){
 								_that.anno_drawer = anno_drawer = dv_annos_drawer2;
+								_that.page_info = dv_page_info2;
 							}else if(viewer==dv_viewer_page){
 								_that.anno_drawer = anno_drawer = dv_annos_drawer_page;
+								_that.page_info = dv_page_info_page;
 							}
 
 
@@ -1768,11 +1875,9 @@
 		    				point = DVDrawerUtil.dvToViewportCor(_anno.sceneX,_anno.sceneY,_that.num),
 	    			 		opoint = new OpenSeadragon.Point(point.x,point.y),
 					        vpoint = _vpoint = _viewport.imageToViewerElementCoordinates( opoint ),	
-					        isMove = false,
 	    			 		text = _context.measureText(_anno.progressiveId);
 	    			 		lX = 0;
 	    			 		lY = 0;
-	    			 		
 	    			 		switch(_that.rotation){
 	    			 			case 180:
 	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
@@ -1797,112 +1902,191 @@
 		    			 	
 
 
-							
-		    			 	if(!_jq_anno){
+		    			 	if(!_jq_anno && _anno.dependentId == "0"){
 		    					_jq_anno = eu.div("dv-annotation");
 		    					_dvCanvas.append(_jq_anno);
-		    					_jq_anno
-		    					.bind("click",{},_jqAnnoClickEvent);
-
+		    					_jq_anno.bind("click",{},_jqAnnoClickEvent);
 		    					_that.rotation = 0;
-								function downEvent(e){
+		    					function downEvent(e){
 									_is_move = DVToolbar.Toolbar.getDVMoveAnno().isActive;
 									if(_is_move){
+										dv_move_anno = _that;
 										_that.rotation = DVToolbar.Toolbar.getDVRotate().getRotation();
-										DVUtil.stopEvent(e);
+										//DVUtil.stopEvent(e);
 										isMove = true;
 										_anno.oldX = _anno.sceneX;
 	    			 					_anno.oldY = _anno.sceneY;
+	    			 					_anno.oldShapeType = _anno.shape.type;
 										_that.anno_drawer.clearAnnos();
+										_that.restoreMoveAnno = false;
 									}else{
+										dv_move_anno = null;
 										isMove = false;
 									}
 
 								}
-								function moveEvent(e){
-									if(_is_move){
-										DVUtil.stopEvent(e);
-										if(isMove){
-
-											_that.moveAnno(e);
-
-										}
-									}else{
-										isMove = false;
-									}
-								}
-								function upEvent(e){
-									if(_is_move){
-										DVUtil.stopEvent(e);
-										isMove = false;
-										_that.saveMoveAnno(e);
-										_that.saveMoveShape(e);
-									}else{
-										isMove = false;
-									}
-								}
+								
 
 		    					_jq_anno
 								.bind("mousedown",downEvent)
-								.bind("mousemove",moveEvent)
-								.bind("mouseup",upEvent);
+								.bind("mousemove",_that.moveAnnotation)
+								.bind("mouseup",_that.saveMoveAnnotation);
 
 								if(_jq_anno.get(0).addEventListener){
 									_jq_anno.get(0).addEventListener("touchstart",downEvent);
-									_jq_anno.get(0).addEventListener("touchmove",moveEvent);
-									_jq_anno.get(0).addEventListener("touchend",upEvent);
+									_jq_anno.get(0).addEventListener("touchmove",_that.moveAnnotation);
+									_jq_anno.get(0).addEventListener("touchend",_that.saveMoveAnnotation);
 								}
 		    				}
-
-		    				_jq_anno
-		    				.css({
-		    					"background-color":_anno_bg_color,
-		    					"border":"1px solid "+_anno_border_color,
-		    					"left":lX-10+"px",
-		    					"top":lY-12+"px"
-		    				})
-		    				.data({"ox":lX-10,"oy":lY-12})
-		    				.text(_anno.progressiveId);
-
-							
+                            
+                            if(_anno.dependentId == "0"){
+                                _jq_anno
+			    				.css({
+			    					"background-color":_anno_bg_color,
+			    					"border":"1px solid "+_anno_border_color,
+			    					"left":lX-10+"px",
+			    					"top":lY-12+"px"
+			    				})
+			    				.data({"ox":lX-10,"oy":lY-12})
+			    				.text(_anno.progressiveId);	
+                            }
 
 		    			}
 
+		    			this.moveAnnotation = function(e){
+							if(_is_move){
+								//DVUtil.stopEvent(e);
+								if(isMove){
+
+									_that.moveAnno(e);
+
+								}
+							}else{
+								isMove = false;
+							}
+						}
+						this.saveMoveAnnotation = function(e){
+							if(_is_move){
+								DVUtil.stopEvent(e);
+								isMove = false;
+								_that.saveMoveAnno(e);
+								_that.saveMoveShape(e);
+							}else{
+								isMove = false;
+							}
+						}
+		    			
 		    			this.createAnnoElement = function(){
 		    				if(!_jq_anno_view){
-		    					_jq_anno_view = eu.div("dv-annotation-view");
+                                if(_anno.dependentId == 0){
+                                    _jq_anno_view = eu.div("dv-annotation-view", {
+                                        "id":"container_" + _anno.progressiveId
+                                    });
+                                    _jq_anno_panel_layout = eu.div("panel-group annotation_view_box",{
+                                        "id":"acc_"+_anno.progressiveId,
+                                        "role":"tablist",
+                                        "aria-multiselectable":"true"
+                                    });
+                                }else{
+                                    _jq_anno_view = eu.getElById("container_" + _anno.dependentId);
+                                    _jq_anno_panel_layout = eu.getElById("acc_" + _anno.dependentId);
+                                }
+
 		    					_jq_anno_view.css({"background-color":_anno_bg_color});
+		    					                                
+                                _jq_anno_upload_btn = eu.span("glyphicon glyphicon-floppy-open", {
+                                    "title":"Upload files for this annotation"
+                                });
+                                                                
+                                _jq_anno_child_btn = eu.span("glyphicon glyphicon-th-list", {
+                                    "title":"Add a subsidiary annotation"
+                                });
+                                
+                                _jq_anno_edit_btn = eu.span("glyphicon glyphicon-pencil", {
+                                    "title":"Edit this annotation"
+                                });
+		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok", {
+                                    "title":"Save this annotation"
+                                });
+		    					_jq_anno_cancel = eu.span("glyphicon glyphicon-remove",{
+                                    "title":"Delete this annotation"
+                                },{"color":"#FF3A3A"});
+                                _jq_anno_richeditor_btn = eu.span("glyphicon glyphicon-edit", {
+                                    "title":"Edit this annotation by RichEditor"
+                                });
+                                _jq_anno_close_btn = eu.span("glyphicon glyphicon-minus",{
+                                    "title":"Close"
+                                });
+		    					
 
-		    					//_jq_move_point = eu.div("glyphicon glyphicon-move");
-
-		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok",null,{
-		    						"font-size":"20px",
-		    						"cursor":"pointer",
-		    						"width":"22px",
-		    						"color":"#648FDA"
-		    					});
-		    					_jq_anno_cancel = eu.span("glyphicon glyphicon-remove",null,{
-		    						"font-size":"20px",
-		    						"cursor":"pointer",
-		    						"width":"22px",
-		    						"color":"#FF3A3A",
-		    						"margin":"0 20px"
-		    					});
-		    					_jq_anno_text = eu.textarea("dv-annotation-text form-control");
-
-		    					var jq_anno_left_layout = eu.div("dv-annotation-view-layout-left"),
-		    					jq_anno_right_layout = eu.div("dv-annotation-view-layout-right"),
-		    					jq_anno_bottom_layout = eu.div("dv-annotation-view-layout-bottom");
+                                jq_anno_left_layout = eu.div("dv-annotation-view-layout-left"),
+					    		jq_anno_right_layout = eu.div("dv-annotation-view-layout-right"),
+					    		jq_anno_bottom_layout = eu.div("dv-annotation-view-layout-bottom");
+                                
+                                var jq_anno_layout = eu.div("panel panel-default");
+                                
+                                var annoId = _anno.progressiveId.replace(/\./g,"_");
+                                
+                                var jq_anno_title = eu.div("panel-heading",{
+                                    "id":"heading_" + annoId
+                                }).append(
+                                    eu.span("panel-title").append(
+                                        eu.a("",{
+                                            "data-toggle":"collapse",
+                                            "data-parent":_anno.dependentId=="0"?"#acc_"+_anno.progressiveId:"#acc_"+_anno.dependentId,
+                                            "href":"#" + annoId,
+                                            "aria-expanded":_anno.dependentId=="0"?"true":"false",
+                                            "aria-controls":annoId
+                                        }).append(
+                                            _anno.progressiveId + "&nbsp;" + 
+                                            _anno.user.firstName + "&nbsp;" + 
+                                            _anno.user.lastName
+                                        )
+                                    )
+                                ).appendTo(jq_anno_layout);
+                                
+                                var jq_anno_content_layout = eu.div(_anno.dependentId=="0"?"panel-collapse collapse in":"panel-collapse collapse",{
+                                    "id":annoId,
+                                    "role":"tabpanel",
+                                    "aria-labelledby":"heading_" + annoId
+                                }).appendTo(jq_anno_layout);
+                                
+                                var jq_anno_content = eu.div("panel-body").appendTo(jq_anno_content_layout);
+                                _jq_anno_panel_layout.append(jq_anno_layout);
+                                
 		    					_dvCanvas.append(_jq_anno_view);
-		    					_jq_anno_view
-		    					.append(jq_anno_left_layout)
-		    					.append(jq_anno_right_layout)
-		    					.append(jq_anno_bottom_layout);
+		    					_jq_anno_view.append(_jq_anno_panel_layout);
 
+                                 _jq_anno_text = eu.textarea("dv-annotation-text form-control",{
+                                        "id":"text_"+annoId
+                                    }).val(decodeString(_anno.content)).bind("focus",{},_jqAnnoTextFocusEvent);
+                                if(_anno.progressiveId != "new"){
+                                    _jq_anno_text.attr("disabled","disabled");
+                                }
 		    					jq_anno_right_layout.append(_jq_anno_text);
-		    					jq_anno_bottom_layout.append(_jq_anno_save)
-		    					.append(_jq_anno_cancel);
-
+                                if(_anno.dependentId == "0"){
+                                    jq_anno_bottom_layout.append(_jq_anno_upload_btn);
+                                }
+		    					jq_anno_bottom_layout
+                                    .append(_jq_anno_child_btn)
+                                    .append(_jq_anno_richeditor_btn)
+                                    .append(_jq_anno_edit_btn)
+                                    .append(_jq_anno_save)
+                                    .append(_jq_anno_cancel)
+                                    .append(_jq_anno_close_btn);
+                                
+                                jq_anno_content
+                                    .append(jq_anno_right_layout)
+                                    .append(jq_anno_bottom_layout);                                
+                                
+                                if(_anno.dependentId == "0"){
+                                    _jq_anno_upload_btn.bind("click",{},_jqAnnoUploadClickEvent);
+                                }
+                                
+                                _jq_anno_child_btn.bind("click",{},_jqAnnoChildClickEvent);
+                                _jq_anno_edit_btn.bind("click",{},_jqAnnoEditClickEvent);
+                                _jq_anno_close_btn.bind("click",{},_jqAnnoCloseClickEvent);
+                                _jq_anno_richeditor_btn.bind("click",{}, _jqAnnoRicheditorClickEvent);
 		    					_jq_anno_save.bind("click",{"anno_drawer":anno_drawer},_jqAnnoSaveClickEvent);
 		    					_jq_anno_cancel.bind("click",{},_jqAnnoCancelClickEvent);
 		    					_jq_anno_text.bind("focus",{},_jqAnnoTextFocusEvent)
@@ -1946,68 +2130,75 @@
 		    			this.save = function(){
 		    				if(_anno.progressiveId=="new"){
 		    					function _success(data){
-								// dv_config_bean = data;
-								anno_drawer.updAnnoList(_num);
-							}
-							function _fail(data){
-								throw Error(data);
-							}
-							var annoText = _jq_anno_text.val();
+									// dv_config_bean = data;
+									anno_drawer.updAnnoList(_that.num);
+								}
+								function _fail(data){
+									throw Error(data);
+								}
+								var annoText = _jq_anno_text.val();
 							
-							DVUtil.callJSON("annotations.davinci",{
-								"sessionid":PUBLIC_CONFIGS.session_id,
-								"dataType":DATA_TYPE,
-								"action":ANNO_ACTION_ADD,
-								"num":DVUtil.getNum(),
-								"dependentId":"0",
-								"content":base64encode(annoText),
-								"fcontent":base64encode(annoText),
-								"page":_anno.page,
-								"x":_anno.sceneX,
-								"y":_anno.sceneY,
-								"tid":"",
-								"c":_anno.color,
-								"b64":"",
-								"playheadtime":"",
-								"type":_anno.shape.type,
-								"sc":_anno.shape.color
-							},null,_success,_fail);
+                                DVUtil.callJSON("annotations.davinci",{
+                                    "sessionid":PUBLIC_CONFIGS.session_id,
+                                    "dataType":DATA_TYPE,
+                                    "action":ANNO_ACTION_ADD,
+                                    "num":_that.num,
+                                    "dependentId":_anno.dependentId,
+                                    "content":base64encode(annoText),
+                                    "fcontent":base64encode(annoText),
+                                    "page":_anno.page,
+                                    "x":_anno.sceneX,
+                                    "y":_anno.sceneY,
+                                    "tid":"",
+                                    "c":_anno.color,
+                                    "b64":"",
+                                    "playheadtime":"",
+                                    "type":_anno.shape.type,
+                                    "sc":_anno.shape.color
+                                },null,_success,_fail);
 		    				}else{
 		    					function _success(data){
-								// dv_config_bean = data;
-								anno_drawer.updAnnoList(_num);
-							}
-							function _fail(data){
-								throw Error(data);
-							}
-							var annoText = _jq_anno_text.val();
-							
-							DVUtil.callJSON("annotations.davinci",{
-								"sessionid":PUBLIC_CONFIGS.session_id,
-								"dataType":DATA_TYPE,
-								"action":ANNO_ACTION_EDIT,
-								"num":DVUtil.getNum(),
-								"noid":_anno.acid,
-								"dependentId":"0",
-								"content":base64encode(annoText),
-								"fcontent":base64encode(annoText),
-								"page":_anno.page,
-								"x":_anno.sceneX,
-								"y":_anno.sceneY,
-								"tid":"",
-								"c":_anno.color,
-								"b64":"",
-								"playheadtime":"",
-								"type":_anno.shape.type,
-								"sc":_anno.shape.color
-							},null,_success,_fail);
+                                    // dv_config_bean = data;
+                                    anno_drawer.updAnnoList(_that.num);
+                                }
+                                function _fail(data){
+                                    throw Error(data);
+                                }
+                                
+                                var annoText = _jq_anno_text.val();
+
+                                DVUtil.callJSON("annotations.davinci",{
+                                    "sessionid":PUBLIC_CONFIGS.session_id,
+                                    "dataType":DATA_TYPE,
+                                    "action":ANNO_ACTION_EDIT,
+                                    "num":_that.num,
+                                    "noid":_anno.acid,
+                                    "dependentId":_anno.dependentId,
+                                    "content":base64encode(annoText),
+                                    "fcontent":base64encode(annoText),
+                                    "page":_anno.page,
+                                    "x":_anno.sceneX,
+                                    "y":_anno.sceneY,
+                                    "tid":"",
+                                    "c":_anno.color,
+                                    "b64":"",
+                                    "playheadtime":"",
+                                    "type":_anno.shape.type,
+                                    "sc":_anno.shape.color
+                                },null,_success,_fail);
 		    				}
 		    			}
 		    			this.moveAnno = function(e){
 		    				_viewport.update();
+		    				DVUtil.stopEvent(e);
 		    				var x = e.clientX,
-							y = e.clientY,
-							ox = _jq_anno.data("ox"),
+							y = e.clientY;
+		    				if(e.targetTouches){
+      							x = e.targetTouches[0].clientX;
+	      						y = e.targetTouches[0].clientY;//-_dvToolbar_layout.height();
+      						}
+		    				
+							var ox = _jq_anno.data("ox"),
 							oy = _jq_anno.data("oy"),
 							mx = x-15,
 							my = y-12-55,
@@ -2019,26 +2210,26 @@
 							switch(_that.rotation){
 								case 180:
 									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-									lx = 2*center.x-vpoint_mouseup.x;
-									ly = 2*center.y-vpoint_mouseup.y+Math.abs(vpoint_mouseup.y-y);
-									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
+									lx = 2*center.x-lx;
+									ly = 2*center.y-ly+55;
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx-25,ly) );
 								break;
 								case 270:
 									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-									lx = center.y+center.x-vpoint_mouseup.y;
-									ly = vpoint_mouseup.x+center.y-center.x+Math.abs(vpoint_mouseup.y-y);
+									lx = center.y+center.x-ly;
+									ly = mx+15+center.y-center.x+15+55;
 									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
 								break;
 								case 90:
 									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-									lx = center.x-center.y+vpoint_mouseup.y;
-									ly = center.y+center.x-vpoint_mouseup.x+Math.abs(vpoint_mouseup.y-y);
+									lx = center.x-center.y+ly;
+									ly = center.y+center.x-mx+15+55;
 									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,ly) );
 								break;
 								default:
 									//lx = ipoint_mouseup.x;
 									//ly = ipoint_mouseup.y;
-									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx,y) );
+									ipont = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lx-25,y) );
 								break;
 							}
 							sencePoint = DVDrawerUtil.dvToImageCor(ipont.x,ipont.y);
@@ -2052,19 +2243,148 @@
 
 		    			}
 		    			this.saveMoveAnno = function(e){
+		    				if(_that.chkOverBounds()){
+		    					_that.save();
+		    				}else{
+		    					_anno.sceneX = _anno.oldX;
+								_anno.sceneY = _anno.oldY;
+								_anno.shape.type = _anno.oldShapeType;
+								_that.restoreMoveAnno = true;
+								_that.anno_drawer.clearAnnos();
+								_that.anno_drawer.draw();
+		    				}
 		    				
 		    			}
 		    			this.moveShape = function(e){}
 		    			this.saveMoveShape = function(e){}
 		    			this.open = function(){
 		    				_showAnnoView = true;
-		    				_jq_anno_view?_jq_anno_view.show():null;
+	                            if(_anno.dependentId == 0){
+	                                _jq_anno_view?_jq_anno_view.show():null;
+	                            }else{
+	                                _jq_anno_view?_jq_anno_view.show():null;
+	                                _jq_anno_view?eu.getElById(_anno.progressiveId.replace(/\./g,"_")).collapse('show'):null; 
+	                            }
 		    				_jq_anno_text?_jq_anno_text.focus():null;
 		    			}
 		    			this.close = function(){
 		    				_showAnnoView = false;
 		    				_jq_anno_view?_jq_anno_view.hide():null;
 		    			}
+                        
+                        this.addChild = function(){}
+			
+			this.chkOverBounds = function(){
+
+		    				if(_anno.oldX==_anno.sceneX&&_anno.oldY==_anno.sceneY){
+    			 				return false;
+    			 			}else{
+    			 				var type = _anno.shape.type,
+    			 				x = parseFloat(_anno.sceneX),
+    			 				y = parseFloat(_anno.sceneY),
+    			 				point = DVDrawerUtil.dvToViewportCor(x,y);
+
+								if(type==""){
+									if(x<0||point.x>_that.page_info.originalWidthPx){
+										return false;
+									}
+									if(y<0||point.y>_that.page_info.originalHeightPx){
+										return false;
+									}
+								}else{
+									var typeArray = type.split(" "),
+									tname = typeArray[0];
+									if(tname==ANNO_RECT){
+										var sx = parseFloat(typeArray[2]),
+										sy = parseFloat(typeArray[3]),
+										mx = Math.max(x,sx),
+										my = Math.max(y,sy),
+										minx = Math.min(x,sx),
+										miny = Math.min(y,sy);
+										point = DVDrawerUtil.dvToViewportCor(mx,my);
+										if(minx<0||point.x>_that.page_info.originalWidthPx){
+											return false;
+										}
+										if(miny<0||point.y>_that.page_info.originalHeightPx){
+											return false;
+										}
+
+									}else if(tname==ANNO_ECLIPSE){
+										var sx = parseFloat(typeArray[2]),
+										sy = parseFloat(typeArray[3]),
+										w = parseFloat(typeArray[4]),
+										h = parseFloat(typeArray[5]),
+										mx = sx+w,
+										my = sy+h;
+										point = DVDrawerUtil.dvToViewportCor(mx,my);
+										if(sx<0||point.x>_that.page_info.originalWidthPx){
+											return false;
+										}
+										if(sx<0||point.y>_that.page_info.originalHeightPx){
+											return false;
+										}
+									}else if(tname==ANNO_FREEHAND){
+										var sx = parseFloat(typeArray[2]),
+										sy = parseFloat(typeArray[3]),
+										shapeData = _that.getShapeData().data,
+										corXArray = [],
+										corYArray = [],
+										index = 0;
+										corXArray.push(sx);
+										corYArray.push(sy);
+
+										for(var i=0;i<shapeData.length;i++){
+											if(index==i){
+												var tx = parseFloat(sx)+parseFloat(shapeData[i]),
+												ty = parseFloat(sy)+parseFloat(shapeData[i+1]);
+												if(typeof tx == "number"&&!isNaN(tx)){
+													corXArray.push(tx); 
+												}
+												if(typeof ty == "number"&&!isNaN(ty)){
+													corYArray.push(ty);
+												}
+												
+											}
+											if(shapeData[i]=="L"||shapeData[i]=="M"){
+												index = i + 1;
+											}
+
+										}
+
+										var mx = Math.max.apply(null,corXArray),
+										my = Math.max.apply(null,corYArray),
+										minx = Math.min.apply(null,corXArray),
+										miny = Math.min.apply(null,corYArray),
+										point = DVDrawerUtil.dvToViewportCor(mx,my);;
+										if(minx<0||point.x>_that.page_info.originalWidthPx){
+											return false;
+										}
+										if(miny<0||point.y>_that.page_info.originalHeightPx){
+											return false;
+										}
+									}else if(tname==ANNO_ARROW){
+										var sx = parseFloat(typeArray[2]),
+										sy = parseFloat(typeArray[3]),
+										w = parseFloat(typeArray[4]),
+										h = parseFloat(typeArray[5]),
+										mx = Math.max(sx+w,sx),
+										my = Math.max(sy+h,sy),
+										minx = Math.min(sx+w,sx),
+										miny = Math.min(sy+h,sy);
+										point = DVDrawerUtil.dvToViewportCor(mx,my);
+										if(minx<0||point.x>_that.page_info.originalWidthPx){
+											return false;
+										}
+										if(miny<0||point.y>_that.page_info.originalHeightPx){
+											return false;
+										}
+									}
+								}
+
+    			 			}
+    			 			return true;
+		    			}
+                        
 		    			function _jqAnnoClickEvent(){
 		    				if(_is_move){
 		    					return;
@@ -2081,33 +2401,123 @@
 		    			 * @return {[type]} [description]
 		    			 */
 		    			function _jqAnnoSaveClickEvent(e){
-		    				
 		    				_that.save();
 		    			}
+                        
+                        function _jqAnnoUploadClickEvent(e){
+                            var upload_dialog,
+                                _jq_dialog_content = eu.div(),
+                                _jq_dialog_footer = eu.div(),
+                                _jq_dialog_btngroup = eu.div("",{},{"text-align":"center","padding-top":"10px"}),
+                                inputFile = eu.input("",{"type":"file","name":"file_upload","id":"upfile_"+_anno.acid});
+                            
+                            _jq_dialog_content.append(inputFile);
+                            var cancel_btn = eu.button("btn btn-primary",{},{
+                                "margin-left":"10px",
+                                "margin-right":"10px"
+                            }).text("Close").bind("click",{},function(e){
+                                upload_dialog.close();
+                            }).appendTo(_jq_dialog_footer);
+                            upload_dialog = eu.openDialog("up_"+_anno.acid, _jq_dialog_content, _jq_dialog_footer, false);
+                            upload_dialog.open();
+                            var url = PUBLIC_CONFIGS.base_url + "attachfile.davinci?" + 
+                                        "sessionid=" + PUBLIC_CONFIGS.session_id + "&" +
+                                        "action=" + ATTACHFILE_ACTION_UPLOAD + "&" +
+                                        "acid=" + _anno.acid + "&" +
+                                        "pid=" + PUBLIC_CONFIGS.proj_id + "&" +
+                                        "num=0" 
+                            inputFile.uploadify({
+                                swf           : 'lib/uploadify/uploadify.swf',
+                                uploader      : url,
+                                fileObjName   : "fileName", 
+                                onSelect      : function(file){
+                                    inputFile.uploadify("setting", "formData", {"fileName":file.name});
+                                }
+                            });
+                            
+                        }
+                        
+                        function _jqAnnoChildClickEvent(e){
+                            _that.addChild();
+                        }
+                        
+                        function _jqAnnoEditClickEvent(e){
+                            _jq_anno_text.removeAttr("disabled")
+                            var target = e.target;
+                            $(target).bind("click",{},_jqAnnoCancleEditClickEvent);
+                        }
+                        
+                        function _jqAnnoCancleEditClickEvent(e){
+                            _jq_anno_text.attr("disabled","disabled")
+                            _jq_anno_text.text(decodeString(_anno.content));
+                            var target = e.target;
+                            $(target).bind("click",{},_jqAnnoEditClickEvent);
+                        }
+                        
+                        function _jqAnnoCloseClickEvent(e){
+                            if(_anno.progressiveId=="new"){
+		    					_that.clearAnno();
+		    				}else{
+                                _that.close();
+                            }
+                        }
+                        
+                        //richeditor btn click listener
+                        function _jqAnnoRicheditorClickEvent(e){
+                            var text,dialog, ckeditor;
+                            text = _jq_anno_text.val();
+                            var _jq_dialog_content = eu.div("div"),
+                                _jq_dialog_footer = eu.div(),
+                                _jq_dialog_btngroup = eu.div("",{},{"text-align":"center","padding-top":"10px"});
+                            var tar = eu.textarea("",{
+                                "id":"tra_"+_anno.progressiveId.replace(/\./g,"_")
+                            }).val(text).appendTo(_jq_dialog_content);
+                            var confirm_btn = eu.button("btn btn-primary",{},{
+                                "margin-left":"10px",
+                                "margin-right":"10px"
+                            }).text("confirm").bind("click",{},function(e){
+                                //因为标签的原因后台乱码
+                                _jq_anno_text.val(ckeditor.getData());
+                                _that.save();
+                                dialog.close();
+                            });
+                            var cancel_btn = eu.button("btn btn-primary",{},{
+                                "margin-left":"10px",
+                                "margin-right":"10px"
+                            }).text("cancel").bind("click",{},function(e){
+                                dialog.close();
+                            });
+                            _jq_dialog_btngroup.append(confirm_btn).append(cancel_btn).appendTo(_jq_dialog_content);
+                            dialog = eu.openDialog("tar_"+_anno.progressiveId.replace(/\./g,"_"),_jq_dialog_content,_jq_dialog_footer);
+                            dialog.open();
+                            ckeditor = CKEDITOR.replace("tra_"+_anno.progressiveId.replace(/\./g,"_"));
+                        }
+                        
 		    			function _jqAnnoTextFocusEvent(e){
 		    				_dvCanvas.find(".dv-annotation-view").removeClass("selected");
 		    				_jq_anno_view.addClass("selected");
 		    			}
+                        
 		    			function _jqAnnoCancelClickEvent(){
 		    				
-						if(_anno.progressiveId=="new"){
+						    if(_anno.progressiveId=="new"){
 		    					_that.clearAnno();
 		    					
 		    				}else{
 		    					function _success(data){
-								// dv_config_bean = data;
-								anno_drawer.updAnnoList(_num);
-							}
-							function _fail(data){
-								throw Error(data);
-							}
-		    					DVUtil.callJSON("annotations.davinci",{
-									"sessionid":PUBLIC_CONFIGS.session_id,
-									"dataType":DATA_TYPE,
-									"action":ANNO_ACTION_DEL,
-									"num":DVUtil.getNum(),
-									"noid":_anno.acid
-								},null,_success,_fail);
+                                    // dv_config_bean = data;
+                                    anno_drawer.updAnnoList(_that.num);
+                                }
+                                function _fail(data){
+                                    throw Error(data);
+                                }
+                                DVUtil.callJSON("annotations.davinci",{
+                                    "sessionid":PUBLIC_CONFIGS.session_id,
+                                    "dataType":DATA_TYPE,
+                                    "action":ANNO_ACTION_DEL,
+                                    "num":_that.num,
+                                    "noid":_anno.acid
+                                },null,_success,_fail);
 		    				}
 
 	
@@ -2126,6 +2536,63 @@
 		    			this.drawAnnoShape = function(){
 		    				
 		    			}
+                        
+                        this.addChild = function(){
+                            var annotaion = {
+                                "acid": "new",
+                                "action": false,
+                                "base64Enabled": null,
+                                "checkstatus": 0,
+                                "color": "15595649,13",
+                                "content": "",
+                                "dependentId": _anno.progressiveId,
+                                "formattedContent": "",
+                                "ignore": false,
+                                "lock": false,
+                                "page": _anno.page,
+                                "pageLabel": null,
+                                "playheadtime": null,
+                                "progressiveId": "new",
+                                "sceneX": _anno.sceneX,
+                                "sceneY": _anno.sceneY,
+                                "shape": {
+                                    "color": "1",
+                                    "type": ""
+                                },
+                                "taskId": "-1",
+                                "timestamp": new Date(),
+                                "type": null,
+                                "user": {
+                                    "firstName": "shinelen",
+                                    "id": "112",
+                                    "lastName": "Brüning",
+                                    "loginName": null,
+                                    "password": null
+                                }
+                            };
+                            _child = new DVNormalAnnoClass(viewer, annotaion);
+                            _child.draw();
+                            
+                            if(viewer==dv_viewer){
+                                anno_drawer = dv_annos_drawer;
+                            }else if(viewer==dv_viewer1){
+                                anno_drawer = dv_annos_drawer1;
+                            }else if(viewer==dv_viewer2){
+                                anno_drawer = dv_annos_drawer2;
+                            }else if(viewer==dv_viewer_page){
+                                anno_drawer = dv_annos_drawer_page;
+                            }
+                            if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                    var acid = item.getAcid();
+                                    if(acid == "new"){
+                                        item.save();
+                                    }
+                                });
+
+                                anno_drawer.getAnnotationList().push(_child);
+                            }
+                        }
 		    		}
 
 			    	DVRectangleAnnoClass = function(viewer,anno){
@@ -2140,18 +2607,14 @@
 		    			_shape;
 		    			this.moveShape = function(e){
 		    				var stype = _anno.shape.type,
-		    				stypes = stype.split(" "),
-		    				sx = 0,sy = 0;
-		    				if(stypes&&stypes.length>4){
-		    					//sx = stypes[2];
-		    					//sy = stypes[3];
-		    					stypes[2] = parseFloat(stypes[2]) - (_anno.sceneX-_anno.oldX);
-		    					stypes[3] = parseFloat(stypes[3]) - (_anno.sceneY-_anno.oldY);
+		    				stypes = stype.split(" ");
+		    				if(stypes&&stypes.length>=6){
+		    					stypes[2] = _anno.sceneX - parseFloat(stypes[4]);
+		    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
 		    				}
-		    				_anno.oldShape = _anno.shape;
+		    				
 		    				_anno.shape.type = stypes.join(" ")
 
-							console.log(_anno);
 		    			}
 		    			this.saveMoveShape = function(e){}
 		    			this.drawAnnoShape = function(){
@@ -2162,7 +2625,7 @@
 		    					parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)),
 		    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
 		    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
-		    				color = DVDrawerUtil.toColor(_shape.color),
+		    				color,
 		    				startX = shape_vpoint.x>shape_vpoint2.x?shape_vpoint2.x:shape_vpoint.x,
 		    				startY = shape_vpoint.y>shape_vpoint2.y?shape_vpoint2.y:shape_vpoint.y,
 		    				lX = 0,
@@ -2199,7 +2662,12 @@
 									lH = Math.abs(shape_vpoint.y-shape_vpoint2.y);
 								break;
 	    			 		}
-							
+							if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
+								color = ERROR_COLOR_STROKE
+							}else{
+								color = DVDrawerUtil.toColor(_shape.color);								
+							}
+							//color = DVDrawerUtil.toColor(_shape.color);
 		    				DVDrawerUtil.drawRect(_context,lX,
 		    					lY,
 		    					lW,
@@ -2207,6 +2675,63 @@
 		    					color,_that.num);
 		    				
 		    			}
+                        
+                        this.addChild = function(){
+                            var annotaion = {
+                                "acid": "new",
+                                "action": false,
+                                "base64Enabled": null,
+                                "checkstatus": 0,
+                                "color": "15595649,13",
+                                "content": "",
+                                "dependentId": _anno.progressiveId,
+                                "formattedContent": "",
+                                "ignore": false,
+                                "lock": false,
+                                "page": _anno.page,
+                                "pageLabel": null,
+                                "playheadtime": null,
+                                "progressiveId": "new",
+                                "sceneX": _anno.sceneX,
+                                "sceneY": _anno.sceneY,
+                                "shape": {
+                                    "color": "1",
+                                    "type": ""
+                                },
+                                "taskId": "-1",
+                                "timestamp": new Date(),
+                                "type": null,
+                                "user": {
+                                    "firstName": "shinelen",
+                                    "id": "112",
+                                    "lastName": "Brüning",
+                                    "loginName": null,
+                                    "password": null
+                                }
+                            };
+                            _child = new DVNormalAnnoClass(viewer, annotaion);
+                            _child.draw();
+                            
+                            if(viewer==dv_viewer){
+                                anno_drawer = dv_annos_drawer;
+                            }else if(viewer==dv_viewer1){
+                                anno_drawer = dv_annos_drawer1;
+                            }else if(viewer==dv_viewer2){
+                                anno_drawer = dv_annos_drawer2;
+                            }else if(viewer==dv_viewer_page){
+                                anno_drawer = dv_annos_drawer_page;
+                            }
+                            if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                    var acid = item.getAcid();
+                                    if(acid == "new"){
+                                        item.save();
+                                    }
+                                });
+
+                                anno_drawer.getAnnotationList().push(_child);
+                            }
+                        }
 		    		}
 
 			    	DVCircleAnnoClass = function(viewer,anno){
@@ -2219,6 +2744,16 @@
 	    			 	_viewport = _viewer.viewport,
 		    			_anno = anno,
 		    			_shape;
+		    			this.moveShape = function(e){
+		    				var stype = _anno.shape.type,
+		    				stypes = stype.split(" ");
+		    				if(stypes&&stypes.length>=6){
+		    					stypes[2] = _anno.sceneX - parseFloat(stypes[4])/2;
+		    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
+		    				}
+		    				_anno.shape.type = stypes.join(" ")
+
+		    			}
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
@@ -2263,12 +2798,73 @@
 									lH = ch;
 								break;
 	    			 		}
-		    				
+		    				if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
+							color = ERROR_COLOR_STROKE
+						}else{
+							color = DVDrawerUtil.toColor(_shape.color);								
+						}
 		    				DVDrawerUtil.drawEllipse(_context,lX,lY,lW,lH,color,_that.num);
 
 		    				
 		    			}
 
+                        
+                        this.addChild = function(){
+                            var annotaion = {
+                                "acid": "new",
+                                "action": false,
+                                "base64Enabled": null,
+                                "checkstatus": 0,
+                                "color": "15595649,13",
+                                "content": "",
+                                "dependentId": _anno.progressiveId,
+                                "formattedContent": "",
+                                "ignore": false,
+                                "lock": false,
+                                "page": _anno.page,
+                                "pageLabel": null,
+                                "playheadtime": null,
+                                "progressiveId": "new",
+                                "sceneX": _anno.sceneX,
+                                "sceneY": _anno.sceneY,
+                                "shape": {
+                                    "color": "1",
+                                    "type": ""
+                                },
+                                "taskId": "-1",
+                                "timestamp": new Date(),
+                                "type": null,
+                                "user": {
+                                    "firstName": "shinelen",
+                                    "id": "112",
+                                    "lastName": "Brüning",
+                                    "loginName": null,
+                                    "password": null
+                                }
+                            };
+                            _child = new DVNormalAnnoClass(viewer, annotaion);
+                            _child.draw();
+                            
+                            if(viewer==dv_viewer){
+                                anno_drawer = dv_annos_drawer;
+                            }else if(viewer==dv_viewer1){
+                                anno_drawer = dv_annos_drawer1;
+                            }else if(viewer==dv_viewer2){
+                                anno_drawer = dv_annos_drawer2;
+                            }else if(viewer==dv_viewer_page){
+                                anno_drawer = dv_annos_drawer_page;
+                            }
+                            if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                    var acid = item.getAcid();
+                                    if(acid == "new"){
+                                        item.save();
+                                    }
+                                });
+
+                                anno_drawer.getAnnotationList().push(_child);
+                            }
+                        }
 
 		    		}
 
@@ -2282,6 +2878,16 @@
 	    			 	_viewport = _viewer.viewport,
 		    			_anno = anno,
 		    			_shape;
+		    			this.moveShape = function(e){
+		    				var stype = _anno.shape.type,
+		    				stypes = stype.split(" ");
+		    				if(stypes&&stypes.length>=6){
+		    					stypes[2] = _anno.sceneX;
+		    					stypes[3] = _anno.sceneY;
+		    				}
+		    				_anno.shape.type = stypes.join(" ")
+
+		    			}
 		    			this.drawAnnoShape = function(){
 		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
 		    				_shape = _that.getShapeData();
@@ -2307,10 +2913,72 @@
 		    					Math.abs(parseFloat(_shape.y)+parseFloat(lY)),
 		    					_that.num
 		    				);
-		    				
-		    				DVDrawerUtil.drawFreehand(_viewport,_context,_shape,_that.rotation,_that.num);
+		    				var color;
+		    				if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
+								color = ERROR_COLOR_STROKE
+							}else{
+								color = null;								
+							}
+		    				DVDrawerUtil.drawFreehand(_viewport,_context,_shape,_that.rotation,_that.num,color);
 
 		    			}
+                        
+                        this.addChild = function(){
+                            var annotaion = {
+                                "acid": "new",
+                                "action": false,
+                                "base64Enabled": null,
+                                "checkstatus": 0,
+                                "color": "15595649,13",
+                                "content": "",
+                                "dependentId": _anno.progressiveId,
+                                "formattedContent": "",
+                                "ignore": false,
+                                "lock": false,
+                                "page": _anno.page,
+                                "pageLabel": null,
+                                "playheadtime": null,
+                                "progressiveId": "new",
+                                "sceneX": _anno.sceneX,
+                                "sceneY": _anno.sceneY,
+                                "shape": {
+                                    "color": "1",
+                                    "type": ""
+                                },
+                                "taskId": "-1",
+                                "timestamp": new Date(),
+                                "type": null,
+                                "user": {
+                                    "firstName": "shinelen",
+                                    "id": "112",
+                                    "lastName": "Brüning",
+                                    "loginName": null,
+                                    "password": null
+                                }
+                            };
+                            _child = new DVNormalAnnoClass(viewer, annotaion);
+                            _child.draw();
+                            
+                            if(viewer==dv_viewer){
+                                anno_drawer = dv_annos_drawer;
+                            }else if(viewer==dv_viewer1){
+                                anno_drawer = dv_annos_drawer1;
+                            }else if(viewer==dv_viewer2){
+                                anno_drawer = dv_annos_drawer2;
+                            }else if(viewer==dv_viewer_page){
+                                anno_drawer = dv_annos_drawer_page;
+                            }
+                            if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                    var acid = item.getAcid();
+                                    if(acid == "new"){
+                                        item.save();
+                                    }
+                                });
+
+                                anno_drawer.getAnnotationList().push(_child);
+                            }
+                        }
 
 
 		    		}
@@ -2325,13 +2993,85 @@
 	    			 	_viewport = _viewer.viewport,
 		    			_anno = anno,
 		    			_shape;
-		    			this.drawAnnoShape = function(){
-		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
-		    				_shape = _that.getShapeData();		    				
-		    				
-		    				DVDrawerUtil.drawArrow(_viewport,_context,_shape,_that.rotation,_that.num);
+		    			this.moveShape = function(e){
+		    				var stype = _anno.shape.type,
+		    				stypes = stype.split(" ");
+		    				if(stypes&&stypes.length>=6){
+		    					stypes[2] = _anno.sceneX;
+		    					stypes[3] = _anno.sceneY;
+		    				}
+		    				_anno.shape.type = stypes.join(" ")
 
 		    			}
+		    			this.drawAnnoShape = function(){
+		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
+		    				_shape = _that.getShapeData();		
+		    				var color;
+		    				if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
+								color = ERROR_COLOR_STROKE
+							}else{
+								color = null;								
+							}
+		    				DVDrawerUtil.drawArrow(_viewport,_context,_shape,_that.rotation,_that.num,color);
+
+		    			}
+                        
+                        this.addChild = function(){
+                            var annotaion = {
+                                "acid": "new",
+                                "action": false,
+                                "base64Enabled": null,
+                                "checkstatus": 0,
+                                "color": "15595649,13",
+                                "content": "",
+                                "dependentId": _anno.progressiveId,
+                                "formattedContent": "",
+                                "ignore": false,
+                                "lock": false,
+                                "page": _anno.page,
+                                "pageLabel": null,
+                                "playheadtime": null,
+                                "progressiveId": "new",
+                                "sceneX": _anno.sceneX,
+                                "sceneY": _anno.sceneY,
+                                "shape": {
+                                    "color": "1",
+                                    "type": ""
+                                },
+                                "taskId": "-1",
+                                "timestamp": new Date(),
+                                "type": null,
+                                "user": {
+                                    "firstName": "shinelen",
+                                    "id": "112",
+                                    "lastName": "Brüning",
+                                    "loginName": null,
+                                    "password": null
+                                }
+                            };
+                            _child = new DVNormalAnnoClass(viewer, annotaion);
+                            _child.draw();
+                            
+                            if(viewer==dv_viewer){
+                                anno_drawer = dv_annos_drawer;
+                            }else if(viewer==dv_viewer1){
+                                anno_drawer = dv_annos_drawer1;
+                            }else if(viewer==dv_viewer2){
+                                anno_drawer = dv_annos_drawer2;
+                            }else if(viewer==dv_viewer_page){
+                                anno_drawer = dv_annos_drawer_page;
+                            }
+                            if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                    var acid = item.getAcid();
+                                    if(acid == "new"){
+                                        item.save();
+                                    }
+                                });
+
+                                anno_drawer.getAnnotationList().push(_child);
+                            }
+                        }
 		    		}
 
 
@@ -2600,27 +3340,145 @@
 	    							
 	    						})
 	    					}else{
-	    						rowArr.reverse();
+	    						rowArr.sort(function(row1,row2){
+	    							var value1 = row1.find("td").eq(sortIndex).text();
+	    							var value2 = row2.find("td").eq(sortIndex).text();
+	    							if(isNumber){
+	    								return _compareReverseNum(value1, value2);
+	    							}else{
+	    								rowArr.reverse();
+	    							}
+	    							
+	    						})
 	    					}
 		    				_that.getTbody().empty();
 		    				for(var i = 0 ; i < rowArr.length ; i++ ){
 		    					_that.getTbody().append(rowArr[i]);
 		    				}
 		    			}
+                        //正序ID排序
 		    			function _compareNum(num1,num2){
-		    				num1 = num1?parseInt(num1):0;
-		    				num2 = num2?parseInt(num2):0;
-		    				if(num1==0){
-		    					return -1;
-		    				}
-		    				if(num2==0){
-		    					return 1;
-		    				}
-		    				if (num1 < num2) {
-			    				return -1;
-			    			} else if (num1 > num2) {
-			    				return 1;
-			    			} 
+                            var num1_group = num1.split("."),
+                                num2_group = num2.split(".");
+                            var num1_pre = num1_group[0],
+                                num1_suf = num1_group[1],
+                                num2_pre = num2_group[0],
+                                num2_suf = num2_group[1];
+                            var result;
+
+                            if(!num1_suf || !num2_suf){
+                                if(parseInt(num1_pre) < parseInt(num2_pre)){
+                                    result = -1;
+                                }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                                    result = 1;
+                                }else if(parseInt(num1_pre) == parseInt(num2_pre)){
+                                    if(!num1_suf){
+                                        result = -1;
+                                    }else if(!num2_suf){
+                                        result = 1;
+                                    }
+                                }
+                            }else{
+                                var temp1_pre = parseInt(num1_pre),
+                                    temp2_pre = parseInt(num2_pre),
+                                    temp1_suf = parseInt(num1_suf),
+                                    temp2_suf = parseInt(num2_suf);
+                                if(temp1_pre < temp2_pre){
+                                    result = -1;
+                                }else if(temp1_pre > temp2_pre){
+                                    result = 1;
+                                }else if(temp1_pre == temp2_pre){
+                                    if(temp1_suf < temp2_suf){
+                                        result = -1;
+                                    }else{
+                                        result = 1;
+                                    }
+                                }
+                            }
+                            console.log("num1_group---->" + num1_group + "\n" +
+                                        "num1_pre------>" + num1_pre + "\n" +
+                                        "num1_suf------>" + num1_suf + "\n" +
+                                        "num2_group---->" + num2_group + "\n" +
+                                        "num2_pre------>" + num2_pre + "\n" +
+                                        "num2_suf------>" + num2_suf + "\n" +
+                                        "result-------->" + result);
+                            return result;
+                            
+//		    				num1 = num1?parseInt(num1):0;
+//		    				num2 = num2?parseInt(num2):0;
+//		    				if(num1==0){
+//		    					return -1;
+//		    				}
+//		    				if(num2==0){
+//		    					return 1;
+//		    				}
+//		    				if (num1 < num2) {
+//			    				return -1;
+//			    			} else if (num1 > num2) {
+//			    				return 1;
+//			    			} 
+		    			}
+                        //倒序ID排序
+                        function _compareReverseNum(num1,num2){
+                            var num1_group = num1.split("."),
+                                num2_group = num2.split(".");
+                            var num1_pre = num1_group[0],
+                                num1_suf = num1_group[1],
+                                num2_pre = num2_group[0],
+                                num2_suf = num2_group[1];
+                            var result;
+
+                            if(!num1_suf || !num2_suf){
+                                if(parseInt(num1_pre) < parseInt(num2_pre)){
+                                    result = 1;
+                                }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                                    result = -1;
+                                }else if(parseInt(num1_pre) == parseInt(num2_pre)){
+                                    if(!num1_suf){
+                                        result = -1;
+                                    }else if(!num2_suf){
+                                        result = 1;
+                                    }
+                                }
+                            }else{
+                                var temp1_pre = parseInt(num1_pre),
+                                    temp2_pre = parseInt(num2_pre),
+                                    temp1_suf = parseInt(num1_suf),
+                                    temp2_suf = parseInt(num2_suf);
+                                if(temp1_pre < temp2_pre){
+                                    result = 1;
+                                }else if(temp1_pre > temp2_pre){
+                                    result = -1;
+                                }else if(temp1_pre == temp2_pre){
+                                    if(temp1_suf < temp2_suf){
+                                        result = -1;
+                                    }else{
+                                        result = 1;
+                                    }
+                                }
+                            }
+                            console.log("num1_group---->" + num1_group + "\n" +
+                                        "num1_pre------>" + num1_pre + "\n" +
+                                        "num1_suf------>" + num1_suf + "\n" +
+                                        "num2_group---->" + num2_group + "\n" +
+                                        "num2_pre------>" + num2_pre + "\n" +
+                                        "num2_suf------>" + num2_suf + "\n" +
+                                        "result-------->" + result);
+                            return result;
+                            
+//		    				num1 = num1?parseInt(num1):0;
+//		    				num2 = num2?parseInt(num2):0;
+//		    				if(num1==0){
+//		    					return -1;
+//		    				}
+//		    				if(num2==0){
+//		    					return 1;
+//		    				}
+//		    				if (num1 < num2) {
+//			    				return -1;
+//			    			} else if (num1 > num2) {
+//			    				return 1;
+//			    			} 
 		    			}
 		    			/*
 					* 对比单个数据并进行排序
@@ -3077,6 +3935,7 @@
 		    		_navbar_nav_version,
 		    		SEP_MIN_W = 105,
 		    		ANNO_MIN_W = 105,
+		    		ANNO_MOVE_MIN_W = 75,
 		    		COMPARE_MIN_W = 235;
 
 		    		DVToolbarClass = function(){
@@ -3219,7 +4078,7 @@
 		    			this.updLayout = function(){
 		    				var w = _dvToolbar.width(),
 		    				bw = _navbar_header_div.width()+20,
-		    				vw = _navbar_nav_version.width()+50,
+		    				vw = _navbar_nav_version.width()+80,
 		    				btn_len = _toolbarBtnlist.length,
 		    				w1 = w - bw - vw,
 		    				fit_w_eles = _dvToolbar.find("li[fit-width=true]"),
@@ -3864,17 +4723,17 @@
 			    	DVMoveAnnoClass = function(){
 			    		DVToolBtnClass.prototype.constructor.call(this);
 			    		var _that = this;
-			    		this.btnICON = ICON_ANNOTATION,
+			    		_that.btnICON = ICON_ANNOTATION;
 			    		_that.isActive = false;
 			    		this.createElement = function(){
-			    			var _element = eu.li(),
+			    			var _element = eu.li(null,{"fit-width":"true"},{"min-width":ANNO_MOVE_MIN_W+"px"}),
 			    			_a = eu.a(),
 			    			_img = eu.img(null,{"src":_that.btnICON});
 			    			_a.append(_img)
 			    			.append(
 			    					eu.div("glyphicon glyphicon-move",null,{
 			    						"color":"#5E95D5",
-			    						"font-size":"5px"
+			    						"font-size":"12px"
 			    					})
 			    			);
 			    			_element.append(_a);
@@ -3883,21 +4742,24 @@
 			    		function _clickEvent(e){
 			    			var s = DVUtil.getCurrentStatus();
 
-			    			if(_that.isActive){
+			    			if(_that.isActive){			    				
 			    				_that.cancel();
-			    			}else{
+			    			}else{			    				
 			    				_that.active();
 			    			}
 //			    			_that.isActive = !_that.isActive;
 
 			    		}
 			    		this.active = function(){
+			    			
 			    			DVToolbar.Toolbar.getDVToolAnno().cancel();
 			    			_that.getElement().addClass("active");
 			    			_that.isActive = true;
 			    			$(".dv-annotation").css({"cursor":"move"});
+			    			dv_toolbar_action = TOOL_MOVE_ANNO;
 			    		}
 			    		this.cancel = function(){
+			    			dv_toolbar_action==TOOL_MOVE_ANNO?dv_toolbar_action = TOOL_NONE:null;
 			    			_that.getElement().removeClass("active");
 			    			_that.isActive = false;
 			    			$(".dv-annotation").css({"cursor":"default"});
@@ -4070,10 +4932,30 @@
 			    	DVMeasureClass = function(){
 			    		DVToolBtnClass.prototype.constructor.call(this);
 			    		var _that = this;
-			    		this.btnICON = ICON_RULER;
+			    		_that.btnICON = ICON_RULER;
+			    		_that.isActive = false;
 			    		function _clickEvent(e){
-			    			var dialog = eu.openDialog("","content","buttons");
-			    			dialog.open();
+			    			var s = DVUtil.getCurrentStatus();
+
+			    			if(_that.isActive){			    				
+			    				_that.cancel();
+			    			}else{			    				
+			    				_that.active();
+			    			}
+//			    			_that.isActive = !_that.isActive;
+
+			    		}
+			    		this.active = function(){
+			    			
+			    			DVToolbar.Toolbar.getDVMeasure().cancel();
+			    			_that.getElement().addClass("active");
+			    			_that.isActive = true;
+			    			dv_toolbar_action = TOOL_MEASURE;
+			    		}
+			    		this.cancel = function(){
+			    			dv_toolbar_action==TOOL_MEASURE?dv_toolbar_action = TOOL_NONE:null;
+			    			_that.getElement().removeClass("active");
+			    			_that.isActive = false;
 			    		}
 
 			    		this.initEvents = function(){
@@ -4211,24 +5093,39 @@
 								jq_footer = eu.div();
 								
 							dialog = eu.openDialog("preference",jq_content,jq_footer);
-				    			var measurement_units_mm,measurementUnits_inches,show_points,annotation_color,draw_color,open_annotation,atCursorHover,zoom_enable,def_anno_font_size,
-				    			def_anno_tab_show,disable_spell_check,spell_check_type,compare_view,disable_sync_pages_check,disable_anno_hover_popup,sens_value;
+				    			var measurement_units_mm,
+				    				measurementUnits_inches,
+				    				show_points,
+				    				annotation_color,
+				    				draw_color,
+				    				open_annotation,
+				    				atCursorHover,
+				    				zoom_enable,
+				    				def_anno_font_size,
+				    				def_anno_tab_show,
+				    				disable_spell_check,
+				    				spell_check_type,
+				    				compare_view,
+				    				disable_sync_pages_check,
+				    				disable_anno_hover_popup,
+				    				sens_value;
 				    			
 				    			function _saveBtnClickEvent(e){
 				    				var urlPara = PUBLIC_CONFIGS.url_parmeters;
+				    				alert(PUBLIC_CONFIGS.proj_id);
 				    				$(this).attr("disabled","true");
-	//error:For input string: "English"			    				
-	var	action = "w";		    				
-	var disable_anno_hover_popup = 0;			    				
-	var sens_value = 0 ;			    				
-	var user_id = urlPara.userId?urlPara.userId:"1" ;
-	var measurement_units = measurementUnits_inches.is(':checked') ? 1 : 0 ;
-	var annotation_color = "";
-	var draw_color = "" ;
-	var compare_view = null;
-	var user_first_name = urlPara.forename?urlPara.forename:"";
-	var user_last_name = urlPara.surname?urlPara.surname:"",
-	disable_sync_pages_check = 0;
+									//error:For input string: "English"			    				
+									var	action = "w";		    				
+									var disable_anno_hover_popup = 0;			    				
+									var sens_value = 0 ;			    				
+									var user_id = urlPara.userId?urlPara.userId:"1" ;
+									var measurement_units = measurementUnits_inches.is(':checked') ? 1 : 0 ;
+									var annotation_color = "";
+									var draw_color = "" ;
+									var compare_view = null;
+									var user_first_name = urlPara.forename?urlPara.forename:"";
+									var user_last_name = urlPara.surname?urlPara.surname:"",
+									disable_sync_pages_check = 0;
 				    				DVUtil.callJSON("userpreference.davinci",{
 				    					"sessionid":PUBLIC_CONFIGS.session_id,
 				    					"dataType":DATA_TYPE,
@@ -4272,7 +5169,11 @@
 				    				measurementUnits_inches = eu.input(null,{"type":"radio","name":"units"}); 
 				    				show_points = eu.input(null,{"type":"checkbox"});
 				    				//annotation_color 
+				    				annotation_color = eu.colorSelector({"id":"anno_color_selector"},"",ANNO_COLOR_ARRAY).getElement();
 				    				//draw_color
+				    				draw_color = eu.colorSelector({"id":"draw_color_selector"},"",ANNO_DRAW_COLOR_ARRAY).getElement();;
+
+
 				    				open_annotation = eu.input(null,{"type":"checkbox"});
 				    				atCursorHover = eu.input(null,{"type":"checkbox"});
 				    				def_anno_font_size = eu.select("form-control") ;
@@ -4294,6 +5195,7 @@
 				    				var compare_view_tab  = eu.option("",null,null,"single","Tab");
 				    				compare_view.append(compare_view_standard).append(compare_view_tab);
 					    			disable_sync_pages_check = eu.input(null,{"type":"checkbox"});
+					    			
 					    			//set check
 					    			//dv_user_preference.annotation_color
 					    			//dv_user_preference.draw_color
@@ -4515,10 +5417,10 @@
 			    			
 			    			function _confirmBtnClickEvent(e){
 			    				$(this).attr("disabled","true");
-var printSel = jq_artwork.is(':checked')+"|"+jq_annotations.is(':checked')+"|"+jq_summarySheet.is(':checked');
-var timezoneOffset = -1*(new Date()).getTimezoneOffset() ;
-var numSize = jq_numberSize.val() ;
-var lineSize = jq_LineSize.val();
+								var printSel = jq_artwork.is(':checked')+"|"+jq_annotations.is(':checked')+"|"+jq_summarySheet.is(':checked');
+								var timezoneOffset = -1*(new Date()).getTimezoneOffset() ;
+								var numSize = jq_numberSize.val() ;
+								var lineSize = jq_LineSize.val();
 								DVUtil.callURL("createpdf.davinci",{"sessionid":PUBLIC_CONFIGS.session_id,"printSel":printSel,"timezoneOffset":timezoneOffset,"numSize":numSize,"lineSize":lineSize});
 								$(this).removeAttr("disabled");
 			    			}
@@ -4557,10 +5459,10 @@ var lineSize = jq_LineSize.val();
 			    			function _confirmBtnClickEvent(e){
 			    				var status = e.data.status;
 			    				$(this).attr("disabled","true");
-//error:can not find the systemid=0 in application when sessionkey=192.168.1.201 Please check the sessionkey is valid and the status is success to define.
-var action = "approve";
-var apptype = status.systemid ;			    				
-var num = (dv_brand==BRAND_COMPARE)?1:0 ;
+								//error:can not find the systemid=0 in application when sessionkey=192.168.1.201 Please check the sessionkey is valid and the status is success to define.
+								var action = "approve";
+								var apptype = status.systemid ;			    				
+								var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 			    				DVUtil.callJSON("approvals.davinci",{
 			    					"sessionid":PUBLIC_CONFIGS.session_id,
 			    					"dataType":DATA_TYPE,
@@ -5430,7 +6332,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
       						if(e.targetTouches){
       							x = e.targetTouches[0].clientX;
 	      						y = e.targetTouches[0].clientY-_dvToolbar_layout.height();
-	      						 _touchEndClientX = e.targetTouches[0].clientX;
+	      						 _touchEndClientX = e.targetTouches[0].clientX; 
 	      						 _touchEndClientY = e.targetTouches[0].clientY;
       						}
       						if(!x||!y){
@@ -5491,8 +6393,6 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
       						_viewport = viewer.viewport,
       						vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(cx,cy) ),
       						page_info = _getPageInfo(viewer),
-      						ERROR_COLOR_STROKE = "#D21E22",
-      						ERROR_COLOR_FILL = "#EF7F79",
       						W_S = 5,H_S = 5,
       						anno_drawer;
 
@@ -5522,7 +6422,38 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 
 
 		    				if(dv_toolbar_action!=TOOL_NONE){
-		    					if(dv_toolbar_action==TOOL_DENSITOMETER){
+		    					if(dv_toolbar_action==TOOL_MEASURE){
+		    						var w = Math.abs(x - _mousedownOffsetX),
+		    			 			h = Math.abs(y - _mousedownOffsetY),
+		    			 			_x = _mousedownOffsetX>x ? x :_mousedownOffsetX,
+		    			 			_y = _mousedownOffsetY>y ? y :_mousedownOffsetY;
+		    			 			_context.putImageData(_orgImgdata,0,0);
+		    			 			_context.save();
+		    			 			_context.globalAlpha=0.5;
+		    			 			if(!_chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info)){
+		    			 				_context.strokeStyle=ERROR_COLOR_STROKE;
+// 		    			 				_context.fillStyle=ERROR_COLOR_FILL;
+		    			 			}else{
+		    			 				_context.strokeStyle="#101B9A";
+// 		    			 				_context.fillStyle="#5E95D5";
+		    			 			}
+		    			 			
+									_context.beginPath();
+									_context.rect(_x, _y, w, h);
+									_context.stroke();
+// 									_context.fill();
+// 		    			 			_context.restore();
+
+		    			 			_context.beginPath();
+									_context.moveTo(_mousedownClientX, _mousedownOffsetY);
+									_context.lineTo(x, y);
+									_context.stroke();
+		    			 			_context.restore();
+		    					}else if(dv_toolbar_action==TOOL_MOVE_ANNO){
+		    						if(dv_move_anno){
+		    							dv_move_anno.moveAnnotation(e);
+		    						}
+		    					}else if(dv_toolbar_action==TOOL_DENSITOMETER){
 		    						var sencePoint = DVDrawerUtil.dvToImageCor(vpoint_mouseup.x,vpoint_mouseup.y);
 		    						DVToolbar.Toolbar.getDVDensitometer()?DVToolbar.Toolbar.getDVDensitometer().updateCor(sencePoint.x,sencePoint.y):null;
 	    			 			}else if(dv_toolbar_action==TOOL_ZOOM&&_dragging){
@@ -5660,7 +6591,61 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
       						}*/
 //		    				e.preventDefault();
 		    				if(dv_toolbar_action!=TOOL_NONE){
-	    			 			if(dv_toolbar_action==TOOL_ZOOM){
+		    					if(dv_toolbar_action==TOOL_MEASURE){
+		    						var w = Math.abs(x - _mousedownClientX),
+		    			 			h = Math.abs(y - _mousedownClientY),
+		    			 			_x = _mousedownClientX>x ? x :_mousedownClientX,
+		    			 			_y = _mousedownClientY>y ? y :_mousedownClientY,
+		    			 			opoint = new OpenSeadragon.Point(_x,_y),
+		    			 			vpoint = _viewport.windowToImageCoordinates( opoint ),		    			 			
+		    			 			vpoint_mouseup,
+		    			 			vpoint_mouseup_zoom = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(x,y) ));
+		    			 			switch(_that.rotation){
+										case 180:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = 2*center.x-vpoint_mouseup_zoom.x;
+											lY = 2*center.y-vpoint_mouseup_zoom.y+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 270:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.y+center.x-vpoint_mouseup_zoom.y;
+											lY = vpoint_mouseup_zoom.x+center.y-center.x+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 90:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.x-center.y+vpoint_mouseup_zoom.y;
+											lY = center.y+center.x-vpoint_mouseup_zoom.x+Math.abs(vpoint_mouseup_zoom.y-y);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										default:
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) );
+										break;
+									}
+		    			 			var vpoint_wh = {w:(Math.abs(vpoint_mouseup.x - _vpoint_mousedown.x)),h:(Math.abs(vpoint_mouseup.y - _vpoint_mousedown.y))},
+		    			 			page_info = _getPageInfo(viewer),
+		    			 			pw = page_info.originalWidthPx,
+		    			 			ph = page_info.originalHeightPx,
+		    			 			b_x = vpoint.x/pw,
+		    			 			b_y = vpoint.y/pw,
+		    			 			b_w = Math.abs(vpoint_wh.w)/pw,
+		    			 			b_h = b_w / _viewport.getAspectRatio(),
+		    			 			bounds = new OpenSeadragon.Rect(b_x,b_y,b_w,b_h);
+
+		    			 			_context.putImageData(_orgImgdata,0,0);
+		    			 			if(!_chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info)){
+		    			 				_dragging = false;
+		    			 				return;
+		    			 			}
+// 									_viewport.fitBounds(bounds);
+// 									DVToolbar.Toolbar.getDVZoom().cancel();
+									viewer.setMouseNavEnabled(true);
+		    					}else if(dv_toolbar_action==TOOL_MOVE_ANNO){
+		    						if(dv_move_anno){
+		    							dv_move_anno.saveMoveAnnotation(e);
+		    						}
+		    					}else if(dv_toolbar_action==TOOL_ZOOM){
 		    			 			var w = Math.abs(x - _mousedownClientX),
 		    			 			h = Math.abs(y - _mousedownClientY),
 		    			 			_x = _mousedownClientX>x ? x :_mousedownClientX,
@@ -5919,6 +6904,13 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 		      							anno_drawer = dv_annos_drawer_page;
 		      						}
 		      						if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                        $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                            var acid = item.getAcid();
+                                            if(acid == "new"){
+                                                item.save();
+                                            }
+                                        });
+                                        
 		      							anno_drawer.getAnnotationList().push(_anno);
 		      						}
 		    			 		}
@@ -5928,7 +6920,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 
 		    			//private
 		    			function _chkOverBounds(point_mousedown,point_mouseup,page_info){
-		    				if((dv_toolbar_action!=TOOL_ANNO)&&point_mousedown.equals(point_mouseup)){    			 				
+		    				if((dv_toolbar_action!=TOOL_ANNO)&&point_mousedown&&point_mousedown.equals(point_mouseup)){    			 				
     			 				return false;
     			 			}else{
     			 				var point_wh = {w:(Math.abs(point_mouseup.x - point_mousedown.x)),h:(Math.abs(point_mouseup.y - point_mousedown.y))},
@@ -6130,10 +7122,75 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 						_differentLabel,
 						_toggleLabel,
 						_diffCanvas,
+						_diffContext,
 						_canvasURL1,
 						_canvasURL2,
 						_isResetURL1 = false,
 						_isResetURL2 = false;
+
+						this.compare = function(){
+							//temp level
+							var level = 10;
+							_diffCanvas.attr({"width":_diffCanvas.width(),"height":_diffCanvas.height()})
+							if(!_diffContext){								
+								_diffContext = _diffCanvas[0].getContext("2d");
+							}
+							if(dv_image_data1&&dv_image_data2){								
+								var w1 = dv_image_data1.width,
+								h1 = dv_image_data1.height,
+								w2 = dv_image_data2.width,
+								h2 = dv_image_data2.height,
+								imgdata1 = dv_image_data1.data,
+								imgdata2 = dv_image_data2.data,
+								diff_image_data = _diffContext.getImageData(0,0,_diffCanvas[0].width,_diffCanvas[0].height);
+								
+								var different = false,
+								r,g,b;
+								for(var i=0;i<imgdata1.length;i++){
+									if(i<imgdata2.length){
+										if(i%4==0){
+											if(Math.abs(imgdata1[i]-imgdata2[i])>level){
+												different = true;
+											}
+										}else if(i%4==1){
+											if(Math.abs(imgdata1[i]-imgdata2[i])>level){
+												different = true;
+											}
+										}else if(i%4==2){
+											if(Math.abs(imgdata1[i]-imgdata2[i])>level){
+												different = true;
+											}
+										}else if(i%4==3){
+											if(!different){
+												diff_image_data.data[i] = 0;
+											}else{
+												diff_image_data.data[i-3] = 0;
+												diff_image_data.data[i-2] = 255;
+												diff_image_data.data[i-1] = 0;
+												diff_image_data.data[i] = 170;
+											}
+											different = false;
+										}
+										
+									}									
+								}
+								_diffContext.putImageData(diff_image_data,0,0);
+								/*for(var y=0;y<h1;y++){
+									for(var x=0;x<w1;x++){
+										//index 为当前要处理的像素编号  
+										var index = y * imageData.width + x;  
+										//一个像素占四个字节，即 p 为当前指针的位置  
+										var p = index * 4;  
+										//改变当前像素 offset 颜色分量的数值，offset 取值为0-3  
+										var color = imageData.data[p + offset] * event.target.value / 50;   
+										// 颜色值限定在[0..255]  
+										color = Math.min(255, color);   
+										//将改变后的颜色值存回数组  
+										imageData.data[p + offset]=color;
+									}
+								}*/
+							}
+						}
 						this.resetCanvasURL = function(){
 							_isResetURL1 = true;	
 							_isResetURL2 = true;					
@@ -6171,7 +7228,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 
 							_dvCanvasStadCompare3 = eu.div(_className,{"num":"c"},{"position":"relative"});
 							_dvCanvas3 = eu.div("dvCanvas");
-							_diffCanvas = eu.canvas();
+							_diffCanvas = eu.canvas("dvCompareCanvas");
 							_dvCanvas3.append(_diffCanvas);
 							_dvCanvasStadCompare3.append(_dvCanvas3);
 
@@ -6381,7 +7438,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 				    			 	}
 				    			 	snycAnimation1 = false;
 				    			 	dv_viewer2?dv_viewer2.setMouseNavEnabled(true):null;
-				    			 	
+				    			 	_that.compare();
 							    	// viewer.setFullScreen(true);
 				    			 }
 
@@ -6490,7 +7547,7 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 				    			 	}
 				    			 	snycAnimation2 = false;
 				    			 	dv_viewer1?dv_viewer1.setMouseNavEnabled(true):null;
-				    			 	
+				    			 	_that.compare();
 				    			 }
 
 				    			 function _animationEvent(e){
@@ -6508,7 +7565,8 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 						this.createViewer = function(){}
 
 				    		this.initEvents = function(){
-				    			var _toggleInterval;
+				    			var _toggleInterval,
+				    			img = eu.img();
 
 				    			_differentLabel.bind("click",{},_differentLabelClickEvent);
 				    			_toggleLabel.bind("click",{},_toggleLabelClickEvent);
@@ -6516,17 +7574,23 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 				    			function _differentLabelClickEvent(e){
 				    				if(_toggleInterval){
 				    					window.clearInterval(_toggleInterval);
-				    					_dvCanvas3.empty();
+				    					img.hide();
+				    					_diffCanvas.show();
+// 				    					_dvCanvas3.empty();
+
 				    				}
 				    			}
 
 				    			function _toggleLabelClickEvent(e){
 				    				var _toggle = true;
+
 				    				function _interval(){
+				    					_diffCanvas.hide();
+				    					img.show();
 				    					if(_toggle){			    						
-				    						_dvCanvas3.html(eu.img(null,{"src":_canvasURL2}));
+				    						_dvCanvas3.append(img.attr({"src":_canvasURL2}));
 				    					}else{
-				    						_dvCanvas3.html(eu.img(null,{"src":_canvasURL1}));
+				    						_dvCanvas3.append(img.attr({"src":_canvasURL1}));
 				    					}
 				    					_toggle = !_toggle;
 				    					
@@ -6947,6 +8011,9 @@ var num = (dv_brand==BRAND_COMPARE)?1:0 ;
 					var _that = dv_davinci = this;
 					this.createCanvas = function(){
 						dv_canvas_compare =  new DVCompareCanvaClass();
+					}
+					this.getCanvas = function(){
+						return dv_canvas_compare;
 					}
 					this.initImageInfo = function(callback){
 

@@ -6,6 +6,7 @@
 <meta http-equiv="Access-Control-Allow-Origin" content="*">
 <title>GAP Davinci</title>
 <link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="lib/uploadify/uploadify.css" />
 <link rel="stylesheet" href="css/davinci.css">
 
 </head>
@@ -15,18 +16,28 @@
 <script src="js/en.js"></script>
 <script src="js/bootstrap.js"></script>
 <script type="text/javascript" src="js/openseadragon.js"></script>
+<script src="lib/ckeditor/ckeditor.js"></script>
+    <script src="lib/uploadify/jquery.uploadify.min.js"></script>
 
 <script>
 //http://23.21.59.238/poc-server/#
+var d3;
     jQuery(function(){
     	var d2 = jQuery("body").davinciClient({
                             base_url:"http://23.21.59.238/dvserver/", 
     		session_key:"smartwavedev.com",
-		session_id:"F9FF64B2-9068-B75A-4110-D6E184972B6A",
+		session_id:"23C55125-5B6D-7E49-8266-5E5FACF75A06",
 		session_type:"3",
 		access_level:"3"
     	});
         
+        /*d3 = jQuery("body").davinciCompare({
+                            base_url:"http://23.21.59.238/dvserver/", 
+    		session_key:"smartwavedev.com",
+		session_id:"9D243DC6-F9AB-4EF7-F9E4-EC332794DF17",
+		session_type:"3",
+		access_level:"3"
+    	});*/
     });
 
 </script>

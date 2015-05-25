@@ -2,6 +2,14 @@ html,body{
 		height:99%;
 
 	}
+	canvas{
+		-webkit-touch-callout:none;
+		-webkit-user-select:none;
+		-khtml-user-select:none;
+		-moz-user-select:none;
+		-ms-user-select:none;
+		user-select:none;
+	}
 	.dvMain_layout{
 		/*width: 100%;*/
 		height: 100%;
@@ -185,22 +193,30 @@ html,body{
 	.gicon:hover{
 		color:#8F9088;
 	}
-	
 	.dv-annotation-view{
 		position: absolute;
-		width: 235px;
-		height: 150px;
+		width: 340px;
+		max-height: 220px;
 		top: 0px;
 		left: 0px;
-		text-align: right;
 		background-color: #666;
 		display: none;
+		padding: 5px;
 		z-index: 200;
 		-webkit-box-shadow: #666 0px 0px 10px;
 		-moz-box-shadow: #666 0px 0px 10px;
 		border-radius: 4px;
   		border: solid 2px rgba(55,55,55,0.7);
 	}
+
+	.annotation_view_box{
+		overflow-y: auto;
+	 	overflow-x: hidden;
+	  	width: 325px;
+	  	max-height: 193px;
+	  	padding: 0 3px 0 0;
+	}
+
 	.dv-annotation-view.selected{
 		z-index: 201;
 	}
@@ -210,14 +226,13 @@ html,body{
 		float: left;
 	}
 	.dv-annotation-view-layout-right{
-		width: 200px;
-		height: 120px;
 		float: left;
 	}
 	.dv-annotation-view-layout-bottom{
-		width: 230px;
-		height: 30px;
+		width: 280px;
+		height: 20px;
 		float: left;
+        text-align: right;
 	}
 	.dv-annotation-view-btn{
 		width: 20px;
@@ -226,9 +241,18 @@ html,body{
 		cursor: pointer;
 	}
 
+	.dv-annotation-view-layout-bottom>.glyphicon{
+		font-size:12px;
+		cursor:pointer;
+		width:15px;
+        margin-left:10px;
+        color:#648FDA;
+	}
+
+
 	textarea.form-control.dv-annotation-text{
-		width: 180px;
-		height: 110px;
+		width: 280px;
+		height: 120px;
 		margin: 5px;
 		resize: none;
 	}
@@ -249,7 +273,14 @@ html,body{
 		-ms-user-select: none !important;
 		user-select: none !important;
 	}
-	
+
+	.panel-heading,.panel-body{
+		padding: 5px;
+	}
+	.panel-title{
+		font-size: 12px;
+	}
+
 	.dvListTab table div{
 		overflow: hidden; 
 		word-break: normal; 
@@ -276,16 +307,77 @@ html,body{
 		margin-left: 50px;
 	}
 	.dvPreference{}
-	/* .dvPreference div label{
-		width: 50%;
-		text-align:right;
-		padding-top:  10px;
-		margin-right: 50px; 
-	}
-	.dvPreference div input,.dvPreference div select{
-		margin-right: 10px;
-		margin-left: 10px; 
-	} */
+
+
+
+	/*color class*/
+	.btn-F2A3A7{color: #333;background-color: #F2A3A7;border-color: #ccc;}
+	.btn-33FF66{color: #333;background-color: #33FF66;border-color: #ccc;}
+	.btn-DBEEF3{color: #333;background-color: #DBEEF3;border-color: #ccc;}
+	.btn-EEEEEE{color: #333;background-color: #EEEEEE;border-color: #ccc;}
+	.btn-999999{color: #333;background-color: #999999;border-color: #ccc;}
+	.btn-EDF881{color: #333;background-color: #EDF881;border-color: #ccc;}
+	.btn-CCFFFF{color: #333;background-color: #CCFFFF;border-color: #ccc;}
+	.btn-FFCCFF{color: #333;background-color: #FFCCFF;border-color: #ccc;}
+	.btn-FFCC00{color: #333;background-color: #FFCC00;border-color: #ccc;}
+	.btn-999966{color: #333;background-color: #999966;border-color: #ccc;}
+
+
+	.btn-F2A3A7:hover,.btn-F2A3A7:focus,.btn-F2A3A7.focus,.btn-F2A3A7:active,.btn-F2A3A7.active
+	{color: #333; background-color: #F2A3A7; border-color: #ccc; outline: none;}
+	.btn-33FF66:hover,.btn-33FF66:focus,.btn-33FF66.focus,.btn-33FF66:active,.btn-33FF66.active
+	{color: #333; background-color: #33FF66; border-color: #ccc; outline: none;}
+	.btn-DBEEF3:hover,.btn-DBEEF3:focus,.btn-DBEEF3.focus,.btn-DBEEF3:active,.btn-DBEEF3.active
+	{color: #333; background-color: #DBEEF3; border-color: #ccc; outline: none;}
+	.btn-EEEEEE:hover,.btn-EEEEEE:focus,.btn-EEEEEE.focus,.btn-EEEEEE:active,.btn-EEEEEE.active
+	{color: #333; background-color: #EEEEEE; border-color: #ccc; outline: none;}
+	.btn-999999:hover,.btn-999999:focus,.btn-999999.focus,.btn-999999:active,.btn-999999.active
+	{color: #333; background-color: #999999; border-color: #ccc; outline: none;}
+	.btn-EDF881:hover,.btn-EDF881:focus,.btn-EDF881.focus,.btn-EDF881:active,.btn-EDF881.active
+	{color: #333; background-color: #EDF881; border-color: #ccc; outline: none;}
+	.btn-CCFFFF:hover,.btn-CCFFFF:focus,.btn-CCFFFF.focus,.btn-CCFFFF:active,.btn-CCFFFF.active
+	{color: #333; background-color: #CCFFFF; border-color: #ccc; outline: none;}
+	.btn-FFCCFF:hover,.btn-FFCCFF:focus,.btn-FFCCFF.focus,.btn-FFCCFF:active,.btn-FFCCFF.active
+	{color: #333; background-color: #FFCCFF; border-color: #ccc; outline: none;}
+	.btn-FFCC00:hover,.btn-FFCC00:focus,.btn-FFCC00.focus,.btn-FFCC00:active,.btn-FFCC00.active
+	{color: #333; background-color: #FFCC00; border-color: #ccc; outline: none;}
+	.btn-999966:hover,.btn-999966:focus,.btn-999966.focus,.btn-999966:active,.btn-999966.active
+	{color: #333; background-color: #999966; border-color: #ccc; outline: none;}
+
+
+
+	.btn-000001{color: #333;background-color: #000001;border-color: #ccc;}
+	.btn-666666{color: #333;background-color: #666666;border-color: #ccc;}
+	.btn-FF0000{color: #333;background-color: #FF0000;border-color: #ccc;}
+	.btn-00FF00{color: #333;background-color: #00FF00;border-color: #ccc;}
+	.btn-0000FF{color: #333;background-color: #0000FF;border-color: #ccc;}
+	.btn-FFFF00{color: #333;background-color: #FFFF00;border-color: #ccc;}
+	.btn-00FFFF{color: #333;background-color: #00FFFF;border-color: #ccc;}
+	.btn-FF00FF{color: #333;background-color: #FF00FF;border-color: #ccc;}
+	.btn-660099{color: #333;background-color: #660099;border-color: #ccc;}
+
+
+	.btn-000001:hover,.btn-000001:focus,.btn-000001.focus,.btn-000001:active,.btn-000001.active
+	{color: #333; background-color: #000001; border-color: #ccc; outline: none;}
+	.btn-666666:hover,.btn-666666:focus,.btn-666666.focus,.btn-666666:active,.btn-666666.active
+	{color: #333; background-color: #666666; border-color: #ccc; outline: none;}
+	.btn-FF0000:hover,.btn-FF0000:focus,.btn-FF0000.focus,.btn-FF0000:active,.btn-FF0000.active
+	{color: #333; background-color: #FF0000; border-color: #ccc; outline: none;}
+	.btn-00FF00:hover,.btn-00FF00:focus,.btn-00FF00.focus,.btn-00FF00:active,.btn-00FF00.active
+	{color: #333; background-color: #00FF00; border-color: #ccc; outline: none;}
+	.btn-0000FF:hover,.btn-0000FF:focus,.btn-0000FF.focus,.btn-0000FF:active,.btn-0000FF.active
+	{color: #333; background-color: #0000FF; border-color: #ccc; outline: none;}
+	.btn-FFFF00:hover,.btn-FFFF00:focus,.btn-FFFF00.focus,.btn-FFFF00:active,.btn-FFFF00.active
+	{color: #333; background-color: #FFFF00; border-color: #ccc; outline: none;}
+	.btn-00FFFF:hover,.btn-00FFFF:focus,.btn-00FFFF.focus,.btn-00FFFF:active,.btn-00FFFF.active
+	{color: #333; background-color: #00FFFF; border-color: #ccc; outline: none;}
+	.btn-FF00FF:hover,.btn-FF00FF:focus,.btn-FF00FF.focus,.btn-FF00FF:active,.btn-FF00FF.active
+	{color: #333; background-color: #FF00FF; border-color: #ccc; outline: none;}
+	.btn-660099:hover,.btn-660099:focus,.btn-660099.focus,.btn-660099:active,.btn-660099.active
+	{color: #333; background-color: #660099; border-color: #ccc; outline: none;}
+
+
+
 
 	.dvUnselected{
 		-webkit-user-select: none !important;
@@ -296,4 +388,34 @@ html,body{
 .form-group {
 	margin-bottom: 15px;
 	min-height: 30px;
+}
+
+.div_loading{
+    z-index:1001;
+    text-align: center;
+    position: absolute;      /*绝对定位*/   
+    top: 50%;                  /* 距顶部50%*/   
+    left: 50%;                  /* 距左边50%*/   
+    height: 200px;  margin-top: -100px;   /*margin-top为height一半的负值*/   
+    width: 400px;  margin-left: -200px;    /*margin-left为width一半的负值*/ 
+}
+.div_loading_mask{
+    height:100%;
+    width:100%; 
+    position:fixed; 
+    _position:absolute; 
+    top:0; 
+    z-index:1000;
+    opacity:0.3; 
+    filter: alpha(opacity=30); 
+    background-color:#000;
+}
+
+
+canvas{
+	cursor:default;
+}
+.dvCompareCanvas{
+	width:100%;
+	height:100%;
 }
