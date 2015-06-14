@@ -30,32 +30,33 @@
 		    	DVDebug = true,//控制控制台输出，true则显示调试内容，false不显示
 		    	dv_config_default = {
 		    		base_url:"",
-				session_key:"",
-				session_id:"",
-				session_type:"",
-				access_level:"",
-				action_comment:"",
-				proj_type:"",
-				proj_id:"",
-				cycle_id:"",
-				task_id:"",
-				item:"",
-				checklist_id:"",
-				is_open_checklist_tab:"",
-				is_default_checklist_tab:"",
-				dv_cycle_id:"",
-				dv_item:"",
-				use_ip:"",
-				dateFormat:"",
-				url_parmeters:{},
-				containerElement:null
-			},
+					session_key:"",
+					session_id:"",
+					session_type:"",
+					access_level:"",
+					action_comment:"",
+					proj_type:"",
+					proj_id:"",
+					cycle_id:"",
+					task_id:"",
+					item:"",
+					checklist_id:"",
+					is_open_checklist_tab:"",
+					is_default_checklist_tab:"",
+					dv_cycle_id:"",
+					dv_item:"",
+					use_ip:"",
+					dateFormat:"",
+					url_parmeters:{},
+					containerElement:null
+				},
 
 				/**
 				 * @Package
 				 * @Description 主工程包
 				 */
 		    	DVMain = {},
+
 		    	//Classes
 		    	DVClass,//super
 		    	DVClientClass,
@@ -75,12 +76,19 @@
 		    	DVCircleAnnoClass,
 		    	DVFreehandAnnoClass,
 		    	DVArrowAnnoClass,
+		    	DVCommentClass,//子annotation,组件类，annotation内容块的内部组件，用于生成每个显示文字以及操作按钮的组件
+		    	/**
+				 * @Package
+				 * @Description DVAttachFileList包，用于获取保存所有已上传的附件等
+				 */
+	            DVAttachFileList = {},
+
 
 		    	/**
 				 * @Package
 				 * @Description Table List包，用于左边各种Tab（如：Anootation Table，Approvel Table...）生成，事件等
 				 */
-		    	DVTableList = {},		    	
+		    	DVTableList = {},	    	
 		    	//Classes
 		    	DVTabNavClass,
 	    		DVTableListClass,//super
@@ -88,8 +96,9 @@
 		    	DVApprovalListClass,
 		    	DVChecklistClass,
 
+	        	
 
-		    	/**
+			    	/**
 				 * @Package
 				 * @Description Toolbar包，用于头部工具栏的生成，事件等
 				 */
@@ -144,6 +153,11 @@
 		    	DVCompareCanvaClass,
 		    	DVPageCanvaClass,
 
+				//Class
+		    	DVMeasureEleClass,//用于生成和定义measure功能块
+
+		    	DVHistory = {},
+
 		    	
 		    	//UI Elements
 		    	_dvMain_layout,
@@ -178,6 +192,7 @@
 			//single client
 			dv_image_info,//[Object] image info 
 			dv_annotations = [],//[Array] 装载annotation的list
+	            	dv_attachfiles = [],//[Array] 保存所有附件的list
 			dv_approvals=[],//[Array] 装载approval的list
 			dv_page_info,//[Object] page info
 			dv_page = {"page1":1,"page2":2},//[Object] 该对象表示当前页对象，page1默认代表当前页，page2为当双页显示，第二页显示的页数
@@ -193,6 +208,7 @@
 			dv_jq_canvas1,
 			dv_jq_canvas2,
 			dv_jq_canvas_page,
+			dv_measuer,
 
 			dv_viewer_page,
 			dv_page_info_page,
@@ -221,7 +237,7 @@
 			dv_compare_mode=1,// 用于判断compare的模式,1为tab模式，2为compare模式
 			dv_current_num=[1,2,3],//[Array]代表compare当前打开的为哪一图片，[1,2,3]代表3张同时打开，即compare mode，[1]或[2]代表只打开一张，即tab mode
 			dv_canvas_compare,//[DVCompareCanvaClass]
-			dv_anno_class_list = {},
+				dv_anno_class_list = {},//放置全部annotation 的class
 
 			dv_doc_obj,
 			dv_doc_obj_compare,
@@ -294,6 +310,16 @@
 		 	ANNO_HEIGHT = 20,
 		 	ANNO_ROUND = 4,
 		 	ANNO_ALPHA = 0.8,
+
+		 	MEASURE_DECIMAL = 0,
+		 	MEASURE_IMPERIAL = 1,
+		 	MEASURE_MM = "mm",
+		 	MEASURE_INCHES = "inches",
+		 	MEASURE_POINTS = "points",
+
+		 	HISTORY_MOVEMENT = "move&zoom",
+		 	HISTORY_JUMPPAGE = "jump page",
+		 	HISTORY_ROTATE = "rotate",
 		 	
 		 	ERROR_COLOR_STROKE = "#D21E22",
 			ERROR_COLOR_FILL = "#EF7F79",
@@ -509,11 +535,11 @@
 						} else {
 							for (var i = 0; i < colorArr.length; i++) {
 								var color = colorArr[i];
-								var color_btn = eu.button("btn btn-"+color,"{data-id:color-"+color+"}").html("&nbsp;");
+								var color_btn = eu.button("btn btn-"+color,{"data-id":"color-"+color}).html("&nbsp;");
 								color_btn.bind('click', function(event) {
 									/* Act on the event */
 									var id = $(this).attr("data-id");
-									var color = id.substring(2,id.length);
+									var color = id.substring(6,id.length);
 									_this.setColor(color);
 								});
 
@@ -1015,7 +1041,7 @@
 						parameter = "?";
 						parameterArray = [];
 						for(var key in params){
-							parameterArray.push(key+"="+params[key]);							
+							parameterArray.push(key+"="+encodeURIComponent(params[key]));							
 						}
 						parameterArray.push("callNumber="+callNumber);
 						parameter += parameterArray.join("&");
@@ -1338,9 +1364,46 @@
 		    			}
 		    		}
 
-		    	})(DVUtil);
+	    		u.convertedColor = function(colorNum,radix){
+	    			var _radix = radix==(10||16)?radix:10;
+	    			var _fstr = _radix==10?"":"#";
+	    			return _fstr+colorNum.toString(radix);
+	    		}
+	    	})(DVUtil);
 
-		    	(function(d){
+	    	/**
+			 * 封装的附件获取以及初始化
+			 * @param  {[DVAttachFileList]} DVAttachFiles [description]
+			 * @return {[type]}    [description]
+			 */
+            (function(d){
+                d.init = function(){
+                    DVUtil.callJSON('attachfile.davinci',{
+                        "sessionid":PUBLIC_CONFIGS.session_id,
+                        "dataType":DATA_TYPE,
+                        "action":ATTACHFILE_ACTION_READ,
+                        "num":DVUtil.getNum()
+                    },null, function(data){
+                    	dv_attachfiles = {};
+                        $.each(data.result, function(index, item){
+                            var acid = item.acid;
+				          	if(!dv_attachfiles[acid]){
+				            	dv_attachfiles[acid] = [];
+				          	}
+				          	dv_attachfiles[acid].push(item);
+                        });
+                    }, function(data){
+                        throw Error(data);
+                    });
+                }
+            })(DVAttachFileList);
+        	
+        	/**
+			 * 封装的绘图工具
+			 * @param  {[DVDrawerUtil]} DVDrawer [description]
+			 * @return {[type]}    [description]
+			 */
+	    	(function(d){
 		    		d.drawRoundRect = function(context,x, y, w, h, r) {
 		    			
 						if (w < 2 * r) r = w / 2;
@@ -1562,102 +1625,306 @@
     			 	}
 		    	})(DVDrawerUtil);
 
-		    	(function(anno){
-		    		anno.update = function(){
-		    			var _num = 0;
-		    			if(dv_brand==BRAND){
-	    					dv_annos_drawer?dv_annos_drawer.updAnnoList(_num):DVTableList.TabNav.annolistUpdate();
-	    				}else if(dv_brand==BRAND_COMPARE){
-	    					if(dv_current_num&&dv_current_num.length==1&&dv_current_num[0]==1){
-								dv_annos_drawer1?dv_annos_drawer1.updAnnoList():DVTableList.TabNav.annolistUpdate();
-							}else if(dv_current_num&&dv_current_num.length==1&&dv_current_num[0]==2){
-								_num = 1;
-								dv_annos_drawer2?dv_annos_drawer2.updAnnoList(_num):DVTableList.TabNav.annolistUpdate();							
-							}else if(dv_current_num&&dv_current_num.length==3){
-								dv_annos_drawer1?dv_annos_drawer1.updAnnoList(0):DVTableList.TabNav.annolistUpdate();
-								dv_annos_drawer2?dv_annos_drawer2.updAnnoList(1):DVTableList.TabNav.annolistUpdate();
-							}
-
-	    					// _annoTable.getData().update();
-	    					// _annoTable2.getData().update();
-	    				}
-		    		}
-		    		DVAnnotationsClass = function(viewer){
-		    			var _that = this,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-	    			 	_anno = anno,
-		    			_annotationList = [],
-		    			_dv_canvas;
-		    			if(viewer==dv_viewer){
-		    				_dv_canvas = dv_jq_canvas;
-		    			}else if(viewer==dv_viewer1){
-		    				_dv_canvas = dv_jq_canvas1;
-		    			}else if(viewer==dv_viewer2){
-		    				_dv_canvas = dv_jq_canvas2;
-		    			}else if(viewer==dv_viewer_page){
-		    				_dv_canvas = dv_jq_canvas_page;
+		    	(function(h){
+		    		var records = [],
+		    		HISTORY_NONE = "none";
+		    		h.record = function(){
+		    			return {
+		    				"type":HISTORY_NONE,
+		    				"action":{}
 		    			}
-		    			this.initAnnoList = function(annolist){
-		    				var _annolist = annolist || _getAnnoList(),
-		    				_viewer = viewer;
-		    				//clear
-		    				_dv_canvas.find(".dv-annotation").remove();
-		    				_dv_canvas.find(".dv-annotation-view").remove();
-		    				for(var i=0;i<_annotationList.length;i++){
-		    			 		_annotationList[i].clearAnno();
-		    			 		_annotationList[i] = null;
-		    			 	}
-		    				_annotationList = [];
-		    				if(!_annolist){
-		    					return;
+		    		}
+		    		function createMovementRecord(viewer,isinit){
+		    			var r = new h.record();
+		    			r.type = HISTORY_MOVEMENT;
+						r.action.viewer = viewer;
+						r.action.bounds = isinit==true?viewer.viewport.getHomeBounds():viewer.viewport.getBounds();
+						
+		    			return r;
+		    		}
+		    		function createJumppageRecord(page,isinit){
+		    			var r = new h.record();
+		    			r.type = HISTORY_JUMPPAGE;
+						r.action.page = page;
+		    			return r;
+		    		}
+		    		function createRotateRecord(viewer,rotate,isinit){
+		    			var r = new h.record();
+		    			r.type = HISTORY_ROTATE;
+		    			r.action.viewer = viewer;
+						r.action.rotate = rotate;
+		    			return r;
+		    		}
+		    		var tempRecord;
+		    		h.addRecord = function(argObj){
+		    			
+		    			
+		    			if(typeof argObj=="object"){
+		    				/*
+			    			 *用于初始第一次，使用初始值替代 
+			    			 */
+		    				if(!tempRecord){
+		    					switch(argObj.type){
+									case HISTORY_MOVEMENT:
+										tempRecord = createMovementRecord(argObj.action.viewer,true);
+									break;
+									case HISTORY_JUMPPAGE:
+										tempRecord = createJumppageRecord(1,true);
+									break;
+									case HISTORY_ROTATE:
+										tempRecord = createRotateRecord(argObj.action.viewer,argObj.action.rotate,true);
+									break;
+								}
+		    					
 		    				}
+							var recordAdd = tempRecord;
+							switch(recordAdd.type){
+								case HISTORY_MOVEMENT:
+									records.push(recordAdd);
+								break;
+								case HISTORY_JUMPPAGE:
+									records.push(recordAdd);
+								break;
+								case HISTORY_ROTATE:
+									records.push(recordAdd);
+								break;
+							}
+							if(records.length){
+								DVToolbar.Toolbar.getDVBack().enabledBtn();
+							}
 		    				
-		    				for(var i=0;i<_annolist.length;i++){
-		    			 		var anno = _annolist[i],
-		    			 		shap = anno.shape,
-		    			 		shaptype = (shap&&$.trim(shap.type)!="")?shap.type.split(" ")[0]:"nomal",
-		    			 		annotation;
-		    			 		switch(shaptype){
-		    			 			case "nomal":
-		    			 				var annoClass = new DVNormalAnnoClass(_viewer,anno);
-		    			 				_annotationList.push(annoClass);
-		    			 				dv_anno_class_list[anno.acid] = annoClass;
-		    			 			break;
-		    			 			case ANNO_ECLIPSE:
-		    			 				// _annotationList.push(new DVCircleAnnoClass(_viewer,anno));
-		    			 				var annoClass = new DVCircleAnnoClass(_viewer,anno);
-		    			 				_annotationList.push(annoClass);
-		    			 				dv_anno_class_list[anno.acid] = annoClass;
-		    			 			break;
-		    			 			case ANNO_RECT:
-		    			 				// _annotationList.push(new DVRectangleAnnoClass(_viewer,anno));
-		    			 				var annoClass = new DVRectangleAnnoClass(_viewer,anno);
-		    			 				_annotationList.push(annoClass);
-		    			 				dv_anno_class_list[anno.acid] = annoClass;
-		    			 			break;
-		    			 			case ANNO_FREEHAND:
-		    			 				// _annotationList.push(new DVFreehandAnnoClass(_viewer,anno));
-		    			 				var annoClass = new DVFreehandAnnoClass(_viewer,anno);
-		    			 				_annotationList.push(annoClass);
-		    			 				dv_anno_class_list[anno.acid] = annoClass;
-		    			 			break;
-		    			 			case ANNO_ARROW:
-		    			 				// _annotationList.push(new DVArrowAnnoClass(_viewer,anno));
-		    			 				var annoClass = new DVArrowAnnoClass(_viewer,anno);
-		    			 				_annotationList.push(annoClass);
-		    			 				dv_anno_class_list[anno.acid] = annoClass;
-		    			 			break;
-		    			 		}
-		    			 	}
+		    				tempRecord = argObj;
+		    			}
+		    		}
+		    		
+		    		h.addMovementRecord = function(viewer){
+		    			if(viewer){
+		    				var _viewport = viewer.viewport,
+							status = DVUtil.getCurrentStatus(),
+							recordActive = false;
+
+							if(viewer==dv_viewer){
+								if(!h.backAtive){									
+									recordActive = true;
+								}							
+
+							}else if(viewer==dv_viewer1){
+								if(!h.backAtive1){
+									recordActive = true;
+								}
+							}else if(viewer==dv_viewer2){
+								if(!h.backAtive2){
+									recordActive = true;
+								}
+							}else if(viewer==dv_viewer_page){
+								if(!h.backAtivePage){
+									if(status.pageStatus.isDoublePageView){
+										recordActive = true;
+									}
+								}
+								
+							}
+							if(recordActive){
+								var r = createMovementRecord(viewer);
+								h.addRecord(r);
+								console.log("add records",r.action.bounds,records,viewer);
+							}
+							
+		    			}		    
+		    						
+		    		}
+
+		    		h.addJumppageRecord = function(page){
+						var r = createJumppageRecord(page);
+						h.addRecord(r);
+						console.log("add records",r.type,r.action);
+		    		}
+		    		h.addRotateRecord = function(viewer,rotate){
+						var r = createRotateRecord(viewer,rotate);
+						h.addRecord(r);
+						console.log("add records",r.type,r.action);
+		    		}
+		    		h.addMovementRecord = function(viewer){
+		    			if(viewer){
+		    				var _viewport = viewer.viewport,
+							status = DVUtil.getCurrentStatus(),
+							recordActive = false;
+
+							if(viewer==dv_viewer){
+								if(!h.backAtive){									
+									recordActive = true;
+								}							
+
+							}else if(viewer==dv_viewer1){
+								if(!h.backAtive1){
+									recordActive = true;
+								}
+							}else if(viewer==dv_viewer2){
+								if(!h.backAtive2){
+									recordActive = true;
+								}
+							}else if(viewer==dv_viewer_page){
+								if(!h.backAtivePage){
+									if(status.pageStatus.isDoublePageView){
+										recordActive = true;
+									}
+								}
+								
+							}
+							if(recordActive){
+								var r = createMovementRecord(viewer);
+								h.addRecord(r);
+								console.log("add records",r.action.bounds,records,viewer);
+							}
+							
+		    			}		    
+		    						
+		    		}
+		    		h.backAtive = false;
+		    		h.backAtive1 = false;
+		    		h.backAtive2 = false;
+		    		h.backAtivePage = false;
+		    		var TIME = 2000;
+		    		h.back = function(){
+		    			if(records&&records.length){
+		    				var r = records[records.length-1];
+		    				if(typeof r=="object"){
+								switch(r.type){
+									case HISTORY_MOVEMENT:
+										var ac = r.action,
+										viewer = ac.viewer,
+										bounds = ac.bounds,
+										viewport = viewer.viewport;
+										if(viewer==dv_viewer){
+											h.backAtive = true;
+											setTimeout(function(){
+												h.backAtive = false;
+											},TIME);
+										}else if(viewer==dv_viewer1){
+											h.backAtive1 = true;
+											setTimeout(function(){
+												h.backAtive1 = false;
+											},TIME);
+										}else if(viewer==dv_viewer2){
+											h.backAtive2 = true;
+											setTimeout(function(){
+												h.backAtive2 = false;
+											},TIME);
+										}else if(viewer==dv_viewer_page){
+											h.backAtivePage = true;
+											setTimeout(function(){
+												h.backAtivePage = false;
+											},TIME);
+										}
+										tempRecord?tempRecord.type = HISTORY_NONE:null;
+										viewport.fitBounds(bounds);
+									break;
+									case HISTORY_JUMPPAGE:
+										var dvpagePanel = DVPageNavigate.pageNav?DVPageNavigate.pageNav.getPanel():null;
+										if(dvpagePanel){
+											var pg = r.action.page;
+											dvpagePanel.setPage(pg);
+										}
+									break;
+									case HISTORY_ROTATE:
+										var ac = r.action,
+										viewer = ac.viewer,
+										rotate = ac.rotate;
+										viewer.viewport.setRotation(rotate);
+									break;
+								}
+							}							
+		    				records.pop();
+		    			}
+		    			return records.length;
+		    		}
+		    	})(DVHistory);
+
+	/**
+			 * 封装的annotation相关类和功能实现
+			 * @param  {[DVAnnotation]} DVAnnotation [description]
+			 * @return {[type]}    [description]
+			 */
+	    	(function(anno){
+	    		anno.update = function(){
+	    			var _num = 0;
+	    			if(dv_brand==BRAND){
+    					dv_annos_drawer?dv_annos_drawer.updAnnoList(_num):DVTableList.TabNav.annolistUpdate();
+    				}else if(dv_brand==BRAND_COMPARE){
+    					if(dv_current_num&&dv_current_num.length==1&&dv_current_num[0]==1){
+							dv_annos_drawer1?dv_annos_drawer1.updAnnoList():DVTableList.TabNav.annolistUpdate();
+						}else if(dv_current_num&&dv_current_num.length==1&&dv_current_num[0]==2){
+							_num = 1;
+							dv_annos_drawer2?dv_annos_drawer2.updAnnoList(_num):DVTableList.TabNav.annolistUpdate();							
+						}else if(dv_current_num&&dv_current_num.length==3){
+							dv_annos_drawer1?dv_annos_drawer1.updAnnoList(0):DVTableList.TabNav.annolistUpdate();
+							dv_annos_drawer2?dv_annos_drawer2.updAnnoList(1):DVTableList.TabNav.annolistUpdate();
+						}
+    				}
+	    		}
+
+	    		DVAnnotationsClass = function(viewer){
+	    			var _that = this,
+	    			_viewer = viewer,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+    			 	_anno = anno,
+	    			_annotationList = [],
+	    			_dv_canvas;
+	    			if(viewer==dv_viewer){
+	    				_dv_canvas = dv_jq_canvas;
+	    			}else if(viewer==dv_viewer1){
+	    				_dv_canvas = dv_jq_canvas1;
+	    			}else if(viewer==dv_viewer2){
+	    				_dv_canvas = dv_jq_canvas2;
+	    			}else if(viewer==dv_viewer_page){
+	    				_dv_canvas = dv_jq_canvas_page;
+	    			}
+	    			this.initAnnoList = function(annolist){
+	    				var _annolist = annolist || _getAnnoList(),_viewer = viewer;
+	    				//clear
+	    				_dv_canvas.find(".dv-annotation").remove();
+	    				_dv_canvas.find(".dv-annotation-view").remove();
+	    				for(var i=0;i<_annotationList.length;i++){
+	    			 		_annotationList[i].clearAnno();
+	    			 		_annotationList[i] = null;
+	    			 	}
+	    				_annotationList = [];
+	    				if(!_annolist){
+	    					return;
+	    				}
+	    				
+	    				for(var i=0;i<_annolist.length;i++){
+	    			 		var anno = _annolist[i],
+	    			 		shap = anno.shape,
+	    			 		shaptype = (shap&&$.trim(shap.type)!="")?shap.type.split(" ")[0]:"nomal",
+	    			 		annotation,annoClass;
+	    			 		switch(shaptype){
+	    			 			case "nomal":
+	    			 				annoClass = new DVNormalAnnoClass(_viewer,anno);
+	    			 			break;
+	    			 			case ANNO_ECLIPSE:
+	    			 				annoClass = new DVCircleAnnoClass(_viewer,anno);
+	    			 			break;
+	    			 			case ANNO_RECT:
+	    			 				annoClass = new DVRectangleAnnoClass(_viewer,anno);
+	    			 			break;
+	    			 			case ANNO_FREEHAND:
+	    			 				annoClass = new DVFreehandAnnoClass(_viewer,anno);
+	    			 			break;
+	    			 			case ANNO_ARROW:
+	    			 				annoClass = new DVArrowAnnoClass(_viewer,anno);
+	    			 			break;
+	    			 		}
+	    			 		_annotationList.push(annoClass);
+	    			 		dv_anno_class_list[anno.acid] = annoClass;
+	    			 	}
 
 		    			}
 
 		    			this.draw = function(){
-//  		    				_that.clearAnnos();
 		    			 	for(var i=0;i<_annotationList.length;i++){
 		    			 		_annotationList[i].draw();
 		    			 	}		    			 	
@@ -1693,7 +1960,7 @@
 
 		    			}
 		    			this.updAnnoList = function(num,callback){
-		    				num  = typeof num == "number"?num:DVUtil.getNum();
+	    					num  = num || DVUtil.getNum();
 		    				function _success(data){
 		    					data = data?data:[];
 		    					_that.initAnnoList(data);
@@ -1736,142 +2003,178 @@
 
 		    		}
 
-		    		DVAnnotationClass = function(viewer,anno){
-		    			var _that = this,
-		    			eu = DVEleUtil,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-	    			 	_anno = anno,
-//                        _anno_children = [],
-	    			 	_anno_bg_color = "rgba(234, 236, 223,0.7)",
-	    			 	_anno_border_color = "#EAECDF",
-	    			 	_anno_font_color = "#000000",
-	    			 	_anno_font_size = "10pt",
-	    			 	_anno_font_style = "Calibri",	    			 	
-	    			 	ANNO_FONT_ALPHA = 1,
-	    			 	ANNO_FONT_WIDTH = 2,
-	    			 	ANNO_FONT_HEIGHT = 3,
-	    			 	_acid = _anno.acid,
-	    			 	_showAnnoView = false,
-	    			 	_jq_anno_view,_jq_anno_panel_layout,_jq_anno_text,_jq_anno_save,_jq_anno_cancel,
-                        //富文本编辑器
-                        _jq_anno_richeditor_btn,
-                        //关闭按钮
-                        _jq_anno_close_btn,
-                        //编辑按钮
-                        _jq_anno_edit_btn,
-                        //子anno按钮
-                        _jq_anno_child_btn,
-                        //附件上传按钮
-                        _jq_anno_upload_btn,
-	    			 	_jq_anno,
-	    			 	_jq_move_point,
-	    			 	_vpoint,
-	    			 	_dvCanvas,_page,
-	    			 	anno_drawer,
-	    			 	_is_move = true,
-	    			 	isMove = false,
-	    			 	lX = 0,
+	    		DVAnnotationClass = function(viewer,anno){
+	    			var _that = this,
+	    			eu = DVEleUtil,
+	    			_viewer = viewer,
+	    			_viewer_name,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+    			 	_anno = anno,
+    			 	_anno_id = _anno.progressiveId.replace(/\./g,"_"),//元素使用的id将.换成_
+    			 	_anno_bg_color = "rgba(234, 236, 223,0.7)",
+    			 	_anno_border_color = "#EAECDF",
+    			 	_anno_font_color = "#000000",
+    			 	_anno_font_size = "10pt",
+    			 	_anno_font_style = "Calibri",	    			 	
+    			 	ANNO_FONT_ALPHA = 1,
+    			 	ANNO_FONT_WIDTH = 2,
+    			 	ANNO_FONT_HEIGHT = 3,
+    			 	_acid = _anno.acid,
+    			 	_showAnnoView = false,
+    			 	_offsetTop = 0,
+    			 	_offsetLeft = 0,
+    			 	_anno_num = 0,
+    			 	_anno_status = 0,//当前annotation状态 0代表新添加时编辑状态 1代表默认显示状态 2代表编辑状态
+
+    			 	//annotation layout
+    			 	_jq_anno_view,_jq_anno_panel_layout,_jq_anno_layout,jq_anno_title,_jq_anno_title_badge,_jq_anno_content_layout,_jq_anno_content,
+    			 	//annotation comment layout
+    			 	jq_anno_comment_box,jq_anno_header_layout,jq_anno_body_layout,jq_anno_footer_layout,jq_anno_header_title,
+    			 	//annotation textarea and display element
+    			 	_jq_anno_text,_jq_anno_display_text,
+    			 	//保存按钮
+    			 	_jq_anno_save,
+    			 	//删除/取消按钮
+    			 	_jq_anno_cancel,
+                    //富文本编辑器按钮
+                    _jq_anno_richeditor_btn,
+                    //关闭按钮
+                    _jq_anno_close_btn,
+                    //编辑按钮
+                    _jq_anno_edit_btn,
+                    //子anno按钮
+                    _jq_anno_child_btn,
+                    //附件上传按钮
+                    _jq_anno_upload_btn,
+
+                    _jq_attachfiles,
+    			 	_jq_anno,
+    			 	_jq_move_point,
+    			 	_vpoint,
+    			 	_dvCanvas,_page,
+    			 	anno_drawer,
+    			 	_is_move = true,
+    			 	isMove = false,
+    			 	lX = 0,
 					lY = 0,
-	    			 	_num;
-	    			 	this.rotation = 0;
-	    			 	this.annoShapeImagedata = null;
-	    			 	this.restoreMoveAnno = false;
-	    			 	
+    			 	_num;
+    			 	this.rotation = 0;
+    			 	this.annoShapeImagedata = null;
+    			 	this.restoreMoveAnno = false;
+    			 	
+    			 	if(viewer==dv_viewer){
+	    				_viewer_name = "dv_viewer";
+	    			}else if(viewer==dv_viewer1){
+	    				_viewer_name = "dv_viewer1";
+	    			}else if(viewer==dv_viewer2){
+	    				_viewer_name = "dv_viewer2";
+	    			}else if(viewer==dv_viewer_page){
+	    				_viewer_name = "dv_viewer_page";
+	    			}
+
+                    this.initAttachfiles = function(){}
+
+    			 	this.getShapeData = function(){
+    			 		var lData = _anno.shape.type.split(" "),
+    			 		_pShape = {};
+		
+						_pShape.type = lData[0];
+						_pShape.scale = lData[1];
+						_pShape.x = lData[2];
+						_pShape.y = lData[3];
+						_pShape.width = lData[4];
+						_pShape.height = lData[5];
+						
+						if(lData.length > 6)
+						{
+							_pShape.data = lData.splice(6);
+						}
+						_pShape.color =  _anno.shape.color;
+						return _pShape;
+    			 	}
+    			 	this.getAcid = function(){
+    			 		return _acid;
+    			 	}
+                    this.getDependentId = function(){
+                        return _anno.dependentId;
+                    }
+                    this.setAnnoStatus = function(anno_status){
+                    	_anno_status = anno_status;
+                    }
+                    this.getAnnoStatus = function(){
+                    	return _anno_status;
+                    }
+	    			this.draw = function(){
+	    				var s = DVUtil.getCurrentStatus(),
+    			 		ratateBtn = DVToolbar.Toolbar.getDVRotate();
+    			 		
+    			 		_that.rotation = ratateBtn.getRotation();
+	    				if(viewer==dv_viewer){
+							_that.anno_drawer = anno_drawer = dv_annos_drawer;
+							_that.page_info = dv_page_info;
+						}else if(viewer==dv_viewer1){
+							_that.anno_drawer = anno_drawer = dv_annos_drawer1;
+							_that.page_info = dv_page_info1;
+						}else if(viewer==dv_viewer2){
+							_that.anno_drawer = anno_drawer = dv_annos_drawer2;
+							_that.page_info = dv_page_info2;
+						}else if(viewer==dv_viewer_page){
+							_that.anno_drawer = anno_drawer = dv_annos_drawer_page;
+							_that.page_info = dv_page_info_page;
+						}
 
 
-
-	    			 	this.getShapeData = function(){
-	    			 		var lData = _anno.shape.type.split(" "),
-	    			 		_pShape = {};
-			
-							_pShape.type = lData[0];
-							_pShape.scale = lData[1];
-							_pShape.x = lData[2];
-							_pShape.y = lData[3];
-							_pShape.width = lData[4];
-							_pShape.height = lData[5];
-							
-							if(lData.length > 6)
-							{
-								_pShape.data = lData.splice(6);
-							}
-							_pShape.color =  _anno.shape.color;
-							return _pShape;
-	    			 	}
-	    			 	this.getAcid = function(){
-	    			 		return _acid;
-	    			 	}
-		    			this.draw = function(){
-		    				var s = DVUtil.getCurrentStatus(),
-	    			 		ratateBtn = DVToolbar.Toolbar.getDVRotate();
-	    			 		
-	    			 		_that.rotation = ratateBtn.getRotation();
-		    				if(viewer==dv_viewer){
-								_that.anno_drawer = anno_drawer = dv_annos_drawer;
-								_that.page_info = dv_page_info;
-							}else if(viewer==dv_viewer1){
-								_that.anno_drawer = anno_drawer = dv_annos_drawer1;
-								_that.page_info = dv_page_info1;
-							}else if(viewer==dv_viewer2){
-								_that.anno_drawer = anno_drawer = dv_annos_drawer2;
-								_that.page_info = dv_page_info2;
-							}else if(viewer==dv_viewer_page){
-								_that.anno_drawer = anno_drawer = dv_annos_drawer_page;
-								_that.page_info = dv_page_info_page;
-							}
-
-
-		    				//clear annotations in canvas
-		    				if(_viewer==dv_viewer){
-		    					_dvCanvas = dv_jq_canvas;
-		    					_that.num = 0;
-		    					if(parseInt(dv_page.page1)!=parseInt(anno.page)){
+	    				//clear annotations in canvas
+	    				if(_viewer==dv_viewer){
+	    					_dvCanvas = dv_jq_canvas;
+	    					_that.num = 0;
+	    					if(parseInt(dv_page.page1)!=parseInt(anno.page)){
+	    						return;
+	    					}		    					
+	    				}else if(_viewer==dv_viewer1){
+	    					_dvCanvas = dv_jq_canvas1;
+	    					_that.num = 0;
+	    					if(parseInt(dv_page1.page1)!=parseInt(anno.page)){
+	    						return;
+	    					}
+	    				}else if(_viewer==dv_viewer2){
+	    					_dvCanvas = dv_jq_canvas2;
+	    					_that.num = 1;
+	    					if(parseInt(dv_page2.page1)!=parseInt(anno.page)){
+	    						return;
+	    					}
+	    				}else if(_viewer==dv_viewer_page){		 
+	    					_dvCanvas = dv_jq_canvas_page;
+	    					_that.num = s.num[0];
+	    					if(s.viewStatus==DV_SINGLE){
+		    					if(parseInt(dv_page.page2)!=parseInt(anno.page)){
 		    						return;
 		    					}		    					
-		    				}else if(_viewer==dv_viewer1){
-		    					_dvCanvas = dv_jq_canvas1;
-		    					_that.num = 0;
-		    					if(parseInt(dv_page1.page1)!=parseInt(anno.page)){
-		    						return;
+		    				}else if(s.viewStatus==DV_COMPARE){
+		    					if(_that.num==0){
+		    						if(parseInt(dv_page1.page2)!=parseInt(anno.page)){
+										return;
+									}
+		    					}else if(_that.num==1){
+		    						if(parseInt(dv_page2.page2)!=parseInt(anno.page)){
+										return;
+									}
 		    					}
-		    				}else if(_viewer==dv_viewer2){
-		    					_dvCanvas = dv_jq_canvas2;
-		    					_that.num = 1;
-		    					if(parseInt(dv_page2.page1)!=parseInt(anno.page)){
-		    						return;
-		    					}
-		    				}else if(_viewer==dv_viewer_page){		 
-		    					_dvCanvas = dv_jq_canvas_page;
-		    					_that.num = s.num[0];
-		    					if(s.viewStatus==DV_SINGLE){
-			    					if(parseInt(dv_page.page2)!=parseInt(anno.page)){
-			    						return;
-			    					}		    					
-			    				}else if(s.viewStatus==DV_COMPARE){
-			    					if(_that.num==0){
-			    						if(parseInt(dv_page1.page2)!=parseInt(anno.page)){
-											return;
-										}
-			    					}else if(_that.num==1){
-			    						if(parseInt(dv_page2.page2)!=parseInt(anno.page)){
-											return;
-										}
-			    					}
-			    					
-			    				}
+		    					
 		    				}
+	    				}
 
-		    				_that.drawAnnoShape();
-		    				_that.drawAnno();
-		    				_that.createAnnoElement();
-		    			}
+	    				_that.drawAnnoShape();
+	    				_that.drawAnno();
+	    				_that.createAnnoElement();
+	    			}
 
-		    			this.drawAnno = function(){
-		    				var s = DVUtil.getCurrentStatus(),
+	    			this.drawAnno = function(){
+	    				if(_anno.dependentId == "0"){
+	    					var s = DVUtil.getCurrentStatus(),
 		    				point = DVDrawerUtil.dvToViewportCor(_anno.sceneX,_anno.sceneY,_that.num),
 	    			 		opoint = new OpenSeadragon.Point(point.x,point.y),
 					        vpoint = _vpoint = _viewport.imageToViewerElementCoordinates( opoint ),	
@@ -1902,13 +2205,13 @@
 		    			 	
 
 
-		    			 	if(!_jq_anno && _anno.dependentId == "0"){
+		    			 	if(!_jq_anno){
 		    					_jq_anno = eu.div("dv-annotation");
 		    					_dvCanvas.append(_jq_anno);
 		    					_jq_anno.bind("click",{},_jqAnnoClickEvent);
 		    					_that.rotation = 0;
 		    					function downEvent(e){
-									_is_move = DVToolbar.Toolbar.getDVMoveAnno().isActive;
+									_is_move = DVToolbar.Toolbar.getDVMoveAnno().isActive?DVToolbar.Toolbar.getDVMoveAnno().isActive:false;
 									if(_is_move){
 										dv_move_anno = _that;
 										_that.rotation = DVToolbar.Toolbar.getDVRotate().getRotation();
@@ -1938,195 +2241,300 @@
 									_jq_anno.get(0).addEventListener("touchend",_that.saveMoveAnnotation);
 								}
 		    				}
-                            
-                            if(_anno.dependentId == "0"){
-                                _jq_anno
-			    				.css({
-			    					"background-color":_anno_bg_color,
-			    					"border":"1px solid "+_anno_border_color,
-			    					"left":lX-10+"px",
-			    					"top":lY-12+"px"
-			    				})
-			    				.data({"ox":lX-10,"oy":lY-12})
-			    				.text(_anno.progressiveId);	
-                            }
+                        
+                            _jq_anno.css({
+		    					"background-color":_anno_bg_color,
+		    					"border":"1px solid "+_anno_border_color,
+		    					"left":lX-10+"px",
+		    					"top":lY-12+"px"
+		    				})
+		    				.data({"ox":lX-10,"oy":lY-12})
+		    				.text(_anno.progressiveId);	
+                        }
+	    			}
 
-		    			}
-
-		    			this.moveAnnotation = function(e){
-							if(_is_move){
-								//DVUtil.stopEvent(e);
-								if(isMove){
-
-									_that.moveAnno(e);
-
-								}
-							}else{
-								isMove = false;
+	    			this.moveAnnotation = function(e){
+						if(_is_move){
+							//DVUtil.stopEvent(e);
+							if(isMove){
+								_that.moveAnno(e);
 							}
+						}else{
+							isMove = false;
 						}
-						this.saveMoveAnnotation = function(e){
-							if(_is_move){
-								DVUtil.stopEvent(e);
-								isMove = false;
-								_that.saveMoveAnno(e);
-								_that.saveMoveShape(e);
-							}else{
-								isMove = false;
-							}
+					}
+					this.saveMoveAnnotation = function(e){
+						if(_is_move){
+							DVUtil.stopEvent(e);
+							isMove = false;
+							_that.saveMoveAnno(e);
+							_that.saveMoveShape(e);
+						}else{
+							isMove = false;
 						}
-		    			
-		    			this.createAnnoElement = function(){
-		    				if(!_jq_anno_view){
-                                if(_anno.dependentId == 0){
-                                    _jq_anno_view = eu.div("dv-annotation-view", {
-                                        "id":"container_" + _anno.progressiveId
-                                    });
-                                    _jq_anno_panel_layout = eu.div("panel-group annotation_view_box",{
-                                        "id":"acc_"+_anno.progressiveId,
-                                        "role":"tablist",
-                                        "aria-multiselectable":"true"
-                                    });
-                                }else{
-                                    _jq_anno_view = eu.getElById("container_" + _anno.dependentId);
-                                    _jq_anno_panel_layout = eu.getElById("acc_" + _anno.dependentId);
-                                }
-
-		    					_jq_anno_view.css({"background-color":_anno_bg_color});
-		    					                                
-                                _jq_anno_upload_btn = eu.span("glyphicon glyphicon-floppy-open", {
-                                    "title":"Upload files for this annotation"
+					}
+					this.getViewerName = function(){
+						return _viewer_name;
+					}
+	    			
+	    			this.createAnnoElement = function(){
+	    				_jq_anno_view = eu.getElById("container_" + _anno_id+"_"+_viewer_name);
+                        if(_jq_anno_view.size()==0){
+                        	if(_anno.dependentId == 0){
+                            	/**
+								*add attachfiles
+                            	*/
+                            	var _jq_file_panel_layout = eu.div("panel-group annotation_view_box annotation_file_box",{
+                                    "id":"file_"+_anno.progressiveId,
+                                    "role":"tablist",
+                                    "aria-multiselectable":"true"
                                 });
-                                                                
-                                _jq_anno_child_btn = eu.span("glyphicon glyphicon-th-list", {
-                                    "title":"Add a subsidiary annotation"
-                                });
-                                
-                                _jq_anno_edit_btn = eu.span("glyphicon glyphicon-pencil", {
-                                    "title":"Edit this annotation"
-                                });
-		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok", {
-                                    "title":"Save this annotation"
-                                });
-		    					_jq_anno_cancel = eu.span("glyphicon glyphicon-remove",{
-                                    "title":"Delete this annotation"
-                                },{"color":"#FF3A3A"});
-                                _jq_anno_richeditor_btn = eu.span("glyphicon glyphicon-edit", {
-                                    "title":"Edit this annotation by RichEditor"
-                                });
-                                _jq_anno_close_btn = eu.span("glyphicon glyphicon-minus",{
-                                    "title":"Close"
-                                });
-		    					
-
-                                jq_anno_left_layout = eu.div("dv-annotation-view-layout-left"),
-					    		jq_anno_right_layout = eu.div("dv-annotation-view-layout-right"),
-					    		jq_anno_bottom_layout = eu.div("dv-annotation-view-layout-bottom");
-                                
-                                var jq_anno_layout = eu.div("panel panel-default");
-                                
-                                var annoId = _anno.progressiveId.replace(/\./g,"_");
-                                
-                                var jq_anno_title = eu.div("panel-heading",{
-                                    "id":"heading_" + annoId
+                                var jq_file_layout = eu.div("panel panel-default");
+                                var jq_file_title_badge = eu.span("badge pull-right").text("0");
+                                var jq_file_title = eu.div("panel-heading",{
+                                    "id":"file_heading_"+_anno_id
                                 }).append(
                                     eu.span("panel-title").append(
                                         eu.a("",{
                                             "data-toggle":"collapse",
-                                            "data-parent":_anno.dependentId=="0"?"#acc_"+_anno.progressiveId:"#acc_"+_anno.dependentId,
-                                            "href":"#" + annoId,
-                                            "aria-expanded":_anno.dependentId=="0"?"true":"false",
-                                            "aria-controls":annoId
-                                        }).append(
-                                            _anno.progressiveId + "&nbsp;" + 
-                                            _anno.user.firstName + "&nbsp;" + 
-                                            _anno.user.lastName
-                                        )
+                                            "data-parent":"#file_" + _anno.progressiveId,
+                                            "href":"#attfile_" + _anno.progressiveId,
+                                            "aria-expanded":"false",
+                                            "aria-controls":_anno.progressiveId
+                                        }).text("Attachment Files")
                                     )
-                                ).appendTo(jq_anno_layout);
-                                
-                                var jq_anno_content_layout = eu.div(_anno.dependentId=="0"?"panel-collapse collapse in":"panel-collapse collapse",{
-                                    "id":annoId,
+                                ).append(jq_file_title_badge).appendTo(jq_file_layout);
+                                var jq_file_content_layout = eu.div("panel-collapse collapse",{
+                                    "id":"attfile_" + _anno_id,
                                     "role":"tabpanel",
-                                    "aria-labelledby":"heading_" + annoId
-                                }).appendTo(jq_anno_layout);
+                                    "aria-labelledby":"file_heading_" + _anno_id
+                                }).appendTo(jq_file_layout);
+                                var jq_file_content = eu.div("panel-body").appendTo(jq_file_content_layout);
+                                _jq_file_panel_layout.append(jq_file_layout);
+                                var filelists = dv_attachfiles.acid;
+                                filelists = [{
+                                    filePath:"#",
+                                    fileName:"test-jpg.jpg"
+                                },{
+                                    filePath:"#",
+                                    fileName:"test-txt.txt"
+                                },{
+                                    filePath:"#",
+                                    fileName:"test-doc.doc"
+                                }];
+                                if(_anno.progressiveId!="new"){
+                                	jq_file_title_badge.text(filelists.length);
+	                                if(filelists){
+	                                    $.each(filelists, function(index, item){
+	                                        eu.div().append($("<a>").attr({
+	                                            "href":item.filePath
+	                                        }).append(item.fileName)).appendTo(jq_file_content)
+	                                    });
+	                                }
+                                }
                                 
-                                var jq_anno_content = eu.div("panel-body").appendTo(jq_anno_content_layout);
-                                _jq_anno_panel_layout.append(jq_anno_layout);
-                                
-		    					_dvCanvas.append(_jq_anno_view);
-		    					_jq_anno_view.append(_jq_anno_panel_layout);
 
-                                 _jq_anno_text = eu.textarea("dv-annotation-text form-control",{
-                                        "id":"text_"+annoId
-                                    }).val(decodeString(_anno.content)).bind("focus",{},_jqAnnoTextFocusEvent);
-                                if(_anno.progressiveId != "new"){
-                                    _jq_anno_text.attr("disabled","disabled");
-                                }
-		    					jq_anno_right_layout.append(_jq_anno_text);
-                                if(_anno.dependentId == "0"){
-                                    jq_anno_bottom_layout.append(_jq_anno_upload_btn);
-                                }
-		    					jq_anno_bottom_layout
-                                    .append(_jq_anno_child_btn)
-                                    .append(_jq_anno_richeditor_btn)
-                                    .append(_jq_anno_edit_btn)
-                                    .append(_jq_anno_save)
-                                    .append(_jq_anno_cancel)
-                                    .append(_jq_anno_close_btn);
+
+                                _jq_anno_view = eu.div("dv-annotation-view", {
+                                    "id":"container_" + _anno_id+"_"+_viewer_name
+                                }).bind("click",_jqAnnoTextFocusEvent);
+                                _jq_anno_panel_layout = eu.div("panel-group annotation_view_box",{
+                                    "id":"acc_"+_anno_id+"_"+_viewer_name,
+                                    "role":"tablist",
+                                    "aria-multiselectable":"true"
+                                });
                                 
-                                jq_anno_content
-                                    .append(jq_anno_right_layout)
-                                    .append(jq_anno_bottom_layout);                                
-                                
-                                if(_anno.dependentId == "0"){
-                                    _jq_anno_upload_btn.bind("click",{},_jqAnnoUploadClickEvent);
-                                }
-                                
-                                _jq_anno_child_btn.bind("click",{},_jqAnnoChildClickEvent);
-                                _jq_anno_edit_btn.bind("click",{},_jqAnnoEditClickEvent);
-                                _jq_anno_close_btn.bind("click",{},_jqAnnoCloseClickEvent);
-                                _jq_anno_richeditor_btn.bind("click",{}, _jqAnnoRicheditorClickEvent);
+
+                                _jq_anno_layout = eu.div("panel panel-default");
+                            	
+                            	_jq_anno_title_badge = eu.span("badge pull-right").text("0");
+
+                            	var anno_title_string = _anno.user.firstName + "&nbsp;" + _anno.user.lastName
+	                            _jq_anno_title = eu.div("panel-heading",{
+	                                "id":"heading_" + _anno_id+"_"+_viewer_name
+	                            }).append(
+	                                eu.span("panel-title").append(
+	                                    eu.a("",{
+	                                        "data-toggle":"collapse",
+	                                        "data-parent":"#acc_"+_anno.progressiveId,
+	                                        "href":"#" + _anno_id+"_"+_viewer_name,
+	                                        "aria-expanded":"true",
+	                                        "aria-controls":_anno_id+"_"+_viewer_name
+	                                    }).append(anno_title_string)
+	                                )
+	                            ).append(_jq_anno_title_badge).appendTo(_jq_anno_layout);
+
+	                            _jq_anno_view.css({"background-color":_anno_bg_color});
+	                            _jq_anno_content_layout = eu.div("panel-collapse collapse in",{
+	                                "id":_anno_id+"_"+_viewer_name,
+	                                "role":"tabpanel",
+	                                "aria-labelledby":"heading_" + _anno_id
+	                            }).appendTo(_jq_anno_layout);
+	                            _jq_anno_content_layout.on('shown.bs.collapse', function () {
+	                            	//alert(_anno_id+":::"+_anno.dependentId);
+								})
+
+	                            _jq_anno_panel_layout.append(_jq_anno_layout);
+	                            _jq_anno_content = eu.div("panel-body",{
+	                            	"id":"comment_body_"+_anno_id+"_"+_viewer_name
+	                            }).appendTo(_jq_anno_content_layout);
+
+	                            _jq_anno_view.append(_jq_file_panel_layout);
+	                            _jq_anno_view.append(_jq_anno_panel_layout);
+	                            _dvCanvas.append(_jq_anno_view);
+
+
+	                            
+                            } else {
+								_jq_anno_view = eu.getElById("container_"+_anno.dependentId+"_"+_viewer_name);
+                            	_jq_anno_panel_layout = eu.getElById("acc_" + _anno.dependentId+"_"+_viewer_name);
+                            	_jq_anno_content = eu.getElById("comment_body_"+_anno.dependentId+"_"+_viewer_name);
+                            	_jq_anno_content_layout = eu.getElById(_anno.dependentId+"_"+_viewer_name);
+                            	_jq_anno_title_badge = eu.getElById("heading_" + _anno.dependentId+"_"+_viewer_name).find(".badge");
+                            }
+
+
+                            if(eu.getElById("anno_comment_box_"+_anno_id+"_"+_viewer_name).size()==0){
+                            	_jq_anno_upload_btn = eu.span("glyphicon glyphicon-floppy-open", {"title":"Upload files for this annotation"});
+		                        _jq_anno_child_btn = eu.span("glyphicon glyphicon-th-list", {"title":"Add a subsidiary annotation"});
+		                        _jq_anno_edit_btn = eu.span("glyphicon glyphicon-pencil", {"title":"Edit this annotation"});
+		    					_jq_anno_save = eu.span("glyphicon glyphicon-ok", {"title":"Save this annotation"});
+		    					_jq_anno_cancel = eu.span("glyphicon glyphicon-remove",{"title":"Delete this annotation"},{"color":"#FF3A3A"});
+		                        _jq_anno_richeditor_btn = eu.span("glyphicon glyphicon-edit", {"title":"Edit this annotation by RichEditor"});
+		                        _jq_anno_close_btn = eu.span("glyphicon glyphicon-minus",{"title":"Close"});
+			    					
+
+		                        jq_anno_header_layout = eu.div("dv-annotation-view-layout-heeder");
+		                        var comment_title_string = _anno.progressiveId + "&nbsp;" + 
+	                                    _anno.user.firstName + "&nbsp;" + 
+	                                    _anno.user.lastName
+		                        
+		                        jq_anno_header_layout.append(comment_title_string);
+					    		jq_anno_body_layout = eu.div("dv-annotation-view-layout-body");
+					    		jq_anno_bottom_layout = eu.div("dv-annotation-view-layout-bottom pull-right");
+		                            
+		                           
+		                        
+		                            
+		                            
+		                            
+		                        jq_anno_comment_box = eu.div("anno-comment-box clearfix",{"id":"anno_comment_box_"+_anno_id+"_"+_viewer_name}).appendTo(_jq_anno_content);
+		                        
+			    				_anno_num = _jq_anno_content.find(".anno-comment-box").size();
+			    				_jq_anno_title_badge.text(_anno_num);
+
+		                        _jq_anno_text = eu.textarea("dv-annotation-text form-control",{
+		                                "id":"text_"+_anno_id+"_"+_viewer_name
+		                            }).val(decodeString(_anno.content)).bind("focus",{},_jqAnnoTextFocusEvent);
+
+		                        _jq_anno_display_text = eu.div("dv-annotation-display-text",{
+		                        	"id":"display_text_"+_anno_id+"_"+_viewer_name
+		                        }).html(decodeString(_anno.content));
+		                        if(_anno.progressiveId != "new"){
+		                            _jq_anno_text.hide();
+		                            _jq_anno_display_text.show();
+		                        } else {
+		                        	_jq_anno_text.show();
+		                            _jq_anno_display_text.hide();
+		                        }
+
+		    					jq_anno_body_layout.append(_jq_anno_text).append(_jq_anno_display_text);
+		                        if(_anno.dependentId == "0"){
+		                        	if(_anno.progressiveId!="new"){
+			                        	jq_anno_bottom_layout
+				    						.append(_jq_anno_upload_btn)
+				    						.append(_jq_anno_child_btn)
+				                            .append(_jq_anno_richeditor_btn)
+				                            .append(_jq_anno_edit_btn)
+				                            .append(_jq_anno_save)
+				                            .append(_jq_anno_cancel)
+				                            .append(_jq_anno_close_btn);
+
+			                        	_jq_anno_edit_btn.bind("click",{},_jqAnnoEditClickEvent);
+			                        	_jq_anno_upload_btn.bind("click",{},_jqAnnoUploadClickEvent);
+			                        	_jq_anno_child_btn.bind("click",{},_jqAnnoChildClickEvent);
+			                        } else {
+			                        	jq_anno_bottom_layout
+				                            .append(_jq_anno_richeditor_btn)
+				                            .append(_jq_anno_save)
+				                            .append(_jq_anno_cancel)
+			                        }
+		                        } else {
+		                        	if(_anno.progressiveId!="new"){
+		                        		jq_anno_bottom_layout
+				                            .append(_jq_anno_richeditor_btn)
+				                            .append(_jq_anno_edit_btn)
+				                            .append(_jq_anno_save)
+				                            .append(_jq_anno_cancel)
+				                            .append(_jq_anno_close_btn);
+		                        	}else{
+		                        		jq_anno_bottom_layout
+				                            .append(_jq_anno_richeditor_btn)
+				                            .append(_jq_anno_save)
+				                            .append(_jq_anno_cancel);
+		                        	}
+		                        }
+		    					
+		                        
+		                        jq_anno_comment_box
+		                        	.append(jq_anno_header_layout)
+		                            .append(jq_anno_body_layout)
+		                            .append(jq_anno_bottom_layout);                                
+		                        
+
+		                        
+		                        
+		                        _jq_anno_close_btn.bind("click",{},_jqAnnoCloseClickEvent);
+		                        _jq_anno_richeditor_btn.bind("click",{}, _jqAnnoRicheditorClickEvent);
 		    					_jq_anno_save.bind("click",{"anno_drawer":anno_drawer},_jqAnnoSaveClickEvent);
 		    					_jq_anno_cancel.bind("click",{},_jqAnnoCancelClickEvent);
-		    					_jq_anno_text.bind("focus",{},_jqAnnoTextFocusEvent)
-		    				}
+		    					_jq_anno_text.bind("focus",{},_jqAnnoTextFocusEvent);
+                            }
+                            
+                        }
 
-		    				// _jq_anno_view.empty();
-		    				_jq_anno_text.val(decodeString(_anno.content));
-		    				
-		    				_jq_anno_view.css({
+
+	    				// _jq_anno_view.empty();
+	    				if(_anno.dependentId == 0){
+	    					_jq_anno_view.css({
 		    					"left":lX+"px",
 		    					"top":lY+"px"
 		    				});
+	    				}
+	    				
+	    				
 
-		    				if(_anno.progressiveId=="new"){
-		    					
-		    					_that.open();
-		    				}
-		    			}
+	    				if(_anno.progressiveId=="new"){
+	    					_that.open();
+	    				}
+	    			}
 
-		    			this.getAnnoViewPoint = function(){
-		    				return _vpoint;
-		    			}
+	    			this.getAnnoViewPoint = function(){
+	    				return _vpoint;
+	    			}
 
-		    			this.drawAnnoShape = function(){}
-		    			this.clearAnno = function(){
-		    				_jq_anno_view?_jq_anno_view.remove():null;
-		    				_jq_anno?_jq_anno.remove():null;
+	    			this.drawAnnoShape = function(){}
+	    			this.clearAnno = function(){
+                        _jq_anno_view?_jq_anno_view.remove():null;
+                        _jq_anno?_jq_anno.remove():null;
 
-		    				_jq_anno_view = null;
-		    				_jq_anno = null;
-		    				if(anno_drawer&&anno_drawer.getAnnotationList()){
+                        _jq_anno_view = null;
+                        _jq_anno = null;
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
 
-      							var w = anno_drawer.getAnnotationList().filter(function(index) {
-									
-									return index!==_that;								
-								});
-								anno_drawer.setAnnotationList(w);
-      						}
-		    				_that.annoShapeImagedata?_context.putImageData(_that.annoShapeImagedata,0,0):null;
-		    			}
+                            var w = anno_drawer.getAnnotationList().filter(function(index) {
+
+                                return index!==_that;								
+                            });
+                            anno_drawer.setAnnotationList(w);
+                        }
+                        _that.annoShapeImagedata?_context.putImageData(_that.annoShapeImagedata,0,0):null;
+	    			}
+	    			this.clearChd = function(){
+	    				jq_anno_comment_box?jq_anno_comment_box.remove():null;
+	    				_anno_num = _jq_anno_content.find(".anno-comment-box").size();
+			    		_jq_anno_title_badge.text(_anno_num);
+	    			}
 		    			this.save = function(){
 		    				if(_anno.progressiveId=="new"){
 		    					function _success(data){
@@ -2258,18 +2666,17 @@
 		    			this.moveShape = function(e){}
 		    			this.saveMoveShape = function(e){}
 		    			this.open = function(){
-		    				_showAnnoView = true;
-	                            if(_anno.dependentId == 0){
-	                                _jq_anno_view?_jq_anno_view.show():null;
-	                            }else{
-	                                _jq_anno_view?_jq_anno_view.show():null;
-	                                _jq_anno_view?eu.getElById(_anno.progressiveId.replace(/\./g,"_")).collapse('show'):null; 
-	                            }
-		    				_jq_anno_text?_jq_anno_text.focus():null;
-		    			}
-		    			this.close = function(){
-		    				_showAnnoView = false;
-		    				_jq_anno_view?_jq_anno_view.hide():null;
+	    				_showAnnoView = true;
+                        if(_jq_anno_view){
+                        	_jq_anno_view.css("display","block");
+                        	_jq_anno_content_layout.collapse('show');
+                        }
+	    				_jq_anno_text?_jq_anno_text.focus():null;
+	    				_jqAnnoTextFocusEvent();
+	    			}
+	    			this.close = function(){
+	    				_showAnnoView = false;
+	    				_jq_anno_view?_jq_anno_view.hide():null;
 		    			}
                         
                         this.addChild = function(){}
@@ -2425,27 +2832,29 @@
                                         "action=" + ATTACHFILE_ACTION_UPLOAD + "&" +
                                         "acid=" + _anno.acid + "&" +
                                         "pid=" + PUBLIC_CONFIGS.proj_id + "&" +
-                                        "num=0" 
-                            inputFile.uploadify({
-                                swf           : 'lib/uploadify/uploadify.swf',
-                                uploader      : url,
-                                fileObjName   : "fileName", 
-                                onSelect      : function(file){
-                                    inputFile.uploadify("setting", "formData", {"fileName":file.name});
-                                }
-                            });
-                            
-                        }
+                                    "num=0" 
+                        inputFile.uploadify({
+                            swf           : "lib/uploadify/uploadify.swf",
+                            uploader      : url,
+                            width         : 300,
+                            fileObjName   : "fileName", 
+                            onSelect      : function(file){
+                                //inputFile.uploadify("setting", "formData", {"fileName":file.name});
+                            }
+                        });
                         
-                        function _jqAnnoChildClickEvent(e){
-                            _that.addChild();
-                        }
-                        
-                        function _jqAnnoEditClickEvent(e){
-                            _jq_anno_text.removeAttr("disabled")
-                            var target = e.target;
-                            $(target).bind("click",{},_jqAnnoCancleEditClickEvent);
-                        }
+                    }
+                    
+                    function _jqAnnoChildClickEvent(e){
+                        _that.addChild();
+                    }
+                    
+                    function _jqAnnoEditClickEvent(e){
+                        _jq_anno_text.show();
+		                _jq_anno_display_text.hide();
+                        var target = e.target;
+                        $(target).bind("click",{},_jqAnnoCancleEditClickEvent);
+                    }
                         
                         function _jqAnnoCancleEditClickEvent(e){
                             _jq_anno_text.attr("disabled","disabled")
@@ -2498,12 +2907,26 @@
 		    				_jq_anno_view.addClass("selected");
 		    			}
                         
-		    			function _jqAnnoCancelClickEvent(){
-		    				
-						    if(_anno.progressiveId=="new"){
-		    					_that.clearAnno();
-		    					
-		    				}else{
+	    			function _jqAnnoCancelClickEvent(){
+					    if(_anno.progressiveId=="new"){
+					    	if(_anno.dependentId==0){
+					    		_that.clearAnno();
+					    	}else{
+					    		_that.clearChd();
+					    	}
+					    	
+	    				}else{
+                            if(_anno.dependentId == "0"){
+                                if(anno_drawer&&anno_drawer.getAnnotationList()){
+                                    for(var i=0;i<anno_drawer.getAnnotationList().length;i++){
+                                        var item = anno_drawer.getAnnotationList()[i];
+                                        if(item.getDependentId() == _anno.progressiveId){
+                                            alert("Can not delete this annotation, please delete children of this annotation first.");
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
 		    					function _success(data){
                                     // dv_config_bean = data;
                                     anno_drawer.updAnnoList(_that.num);
@@ -2532,226 +2955,229 @@
 	    			 	_canvas = _drawer.canvas,
 	    			 	_context = _drawer.context,
 	    			 	_viewport = _viewer.viewport,
-	    			 	_anno = anno;
-		    			this.drawAnnoShape = function(){
-		    				
-		    			}
+    			 	urlPara = PUBLIC_CONFIGS.url_parmeters,
+    			 	_anno = anno;
+	    			this.drawAnnoShape = function(){
+	    				
+	    			}
+                    
+                    this.addChild = function(){
+                        var annotaion = {
+                            "acid": "new",
+                            "action": false,
+                            "base64Enabled": null,
+                            "checkstatus": 0,
+                            "color": "15595649,13",
+                            "content": "",
+                            "dependentId": _anno.progressiveId,
+                            "formattedContent": "",
+                            "ignore": false,
+                            "lock": false,
+                            "page": _anno.page,
+                            "pageLabel": null,
+                            "playheadtime": null,
+                            "progressiveId": "new",
+                            "sceneX": _anno.sceneX,
+                            "sceneY": _anno.sceneY,
+                            "shape": {
+                                "color": "1",
+                                "type": ""
+                            },
+                            "taskId": "-1",
+                            "timestamp": new Date(),
+                            "type": null,
+                            "user": {
+				                "firstName": urlPara.forename?urlPara.forename:"",
+				                "id": urlPara.userId?urlPara.userId:"-1",
+				                "lastName": urlPara.surname?urlPara.forename:"",
+				                "loginName": null,
+				                "password": null
+				            }
+                        };
+                        _child = new DVNormalAnnoClass(viewer, annotaion);
+                        _child.draw();
                         
-                        this.addChild = function(){
-                            var annotaion = {
-                                "acid": "new",
-                                "action": false,
-                                "base64Enabled": null,
-                                "checkstatus": 0,
-                                "color": "15595649,13",
-                                "content": "",
-                                "dependentId": _anno.progressiveId,
-                                "formattedContent": "",
-                                "ignore": false,
-                                "lock": false,
-                                "page": _anno.page,
-                                "pageLabel": null,
-                                "playheadtime": null,
-                                "progressiveId": "new",
-                                "sceneX": _anno.sceneX,
-                                "sceneY": _anno.sceneY,
-                                "shape": {
-                                    "color": "1",
-                                    "type": ""
-                                },
-                                "taskId": "-1",
-                                "timestamp": new Date(),
-                                "type": null,
-                                "user": {
-                                    "firstName": "shinelen",
-                                    "id": "112",
-                                    "lastName": "Brüning",
-                                    "loginName": null,
-                                    "password": null
+                        if(viewer==dv_viewer){
+                            anno_drawer = dv_annos_drawer;
+                        }else if(viewer==dv_viewer1){
+                            anno_drawer = dv_annos_drawer1;
+                        }else if(viewer==dv_viewer2){
+                            anno_drawer = dv_annos_drawer2;
+                        }else if(viewer==dv_viewer_page){
+                            anno_drawer = dv_annos_drawer_page;
+                        }
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
+                            $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                var acid = item.getAcid();
+                                if(acid == "new"){
+                                    item.save();
                                 }
-                            };
-                            _child = new DVNormalAnnoClass(viewer, annotaion);
-                            _child.draw();
-                            
-                            if(viewer==dv_viewer){
-                                anno_drawer = dv_annos_drawer;
-                            }else if(viewer==dv_viewer1){
-                                anno_drawer = dv_annos_drawer1;
-                            }else if(viewer==dv_viewer2){
-                                anno_drawer = dv_annos_drawer2;
-                            }else if(viewer==dv_viewer_page){
-                                anno_drawer = dv_annos_drawer_page;
-                            }
-                            if(anno_drawer&&anno_drawer.getAnnotationList()){
-                                $.each(anno_drawer.getAnnotationList(),function(index,item){
-                                    var acid = item.getAcid();
-                                    if(acid == "new"){
-                                        item.save();
-                                    }
-                                });
+                            });
 
                                 anno_drawer.getAnnotationList().push(_child);
                             }
                         }
 		    		}
 
-			    	DVRectangleAnnoClass = function(viewer,anno){
-		    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
-		    			var _that = this,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-		    			_anno = anno,
-		    			_shape;
-		    			this.moveShape = function(e){
-		    				var stype = _anno.shape.type,
-		    				stypes = stype.split(" ");
-		    				if(stypes&&stypes.length>=6){
-		    					stypes[2] = _anno.sceneX - parseFloat(stypes[4]);
-		    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
-		    				}
-		    				
-		    				_anno.shape.type = stypes.join(" ")
+		    	DVRectangleAnnoClass = function(viewer,anno){
+	    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
+	    			var _that = this,
+	    			_viewer = viewer,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+	    			_anno = anno,
+	    			urlPara = PUBLIC_CONFIGS.url_parmeters,
+	    			_shape;
+	    			this.moveShape = function(e){
+	    				var stype = _anno.shape.type,
+	    				stypes = stype.split(" ");
+	    				if(stypes&&stypes.length>=6){
+	    					stypes[2] = _anno.sceneX - parseFloat(stypes[4]);
+	    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
+	    				}
+	    				
+	    				_anno.shape.type = stypes.join(" ")
 
-		    			}
-		    			this.saveMoveShape = function(e){}
-		    			this.drawAnnoShape = function(){
-		    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
-		    				_shape = _that.getShapeData();
-		    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y,_that.num),
-		    				shape_point2 = DVDrawerUtil.dvToViewportCor(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale),
-		    					parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)),
-		    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
-		    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
-		    				color,
-		    				startX = shape_vpoint.x>shape_vpoint2.x?shape_vpoint2.x:shape_vpoint.x,
-		    				startY = shape_vpoint.y>shape_vpoint2.y?shape_vpoint2.y:shape_vpoint.y,
-		    				lX = 0,
-		    				lY = 0,
-		    				lW = 0,
-		    				lH = 0;
-		    				
-		    				switch(_that.rotation){
-	    			 			case 180:
-	    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-	    			 				lX = startX-(startX-center.x)*2;
-									lY = startY-(startY-center.y)*2;
-									lW = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
-									lH = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
-								break;
-								case 270:
-									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-									lX = startX+(startY-center.y)-(startX-center.x);
-									lY = startY-(startX-center.x)-(startY-center.y);
-									lW = Math.abs(shape_vpoint.y-shape_vpoint2.y);
-									lH = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
-								break;
-								case 90:
-									var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-									lX = startX-(startY-center.y)-(startX-center.x);
-									lY = startY+(startX-center.x)-(startY-center.y);
-									lW = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
-									lH = Math.abs(shape_vpoint.x-shape_vpoint2.x);
-								break;
-								default:
-									lX = startX;
-									lY = startY;
-									lW = Math.abs(shape_vpoint.x-shape_vpoint2.x);
-									lH = Math.abs(shape_vpoint.y-shape_vpoint2.y);
-								break;
-	    			 		}
-							if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
-								color = ERROR_COLOR_STROKE
-							}else{
-								color = DVDrawerUtil.toColor(_shape.color);								
-							}
-							//color = DVDrawerUtil.toColor(_shape.color);
-		    				DVDrawerUtil.drawRect(_context,lX,
-		    					lY,
-		    					lW,
-		    					lH,
-		    					color,_that.num);
-		    				
-		    			}
+	    			}
+	    			this.saveMoveShape = function(e){}
+	    			this.drawAnnoShape = function(){
+	    				_that.annoShapeImagedata =  _context.getImageData(0, 0,_canvas.width,_canvas.height);
+	    				_shape = _that.getShapeData();
+	    				var shape_point = DVDrawerUtil.dvToViewportCor(_shape.x,_shape.y,_that.num),
+	    				shape_point2 = DVDrawerUtil.dvToViewportCor(parseFloat(_shape.x)+parseFloat(_shape.width*_shape.scale),
+	    					parseFloat(_shape.y)+parseFloat(_shape.height*_shape.scale)),
+	    				shape_vpoint = _viewport.imageToViewerElementCoordinates( shape_point ),
+	    				shape_vpoint2 = _viewport.imageToViewerElementCoordinates( shape_point2 ),
+	    				color,
+	    				startX = shape_vpoint.x>shape_vpoint2.x?shape_vpoint2.x:shape_vpoint.x,
+	    				startY = shape_vpoint.y>shape_vpoint2.y?shape_vpoint2.y:shape_vpoint.y,
+	    				lX = 0,
+	    				lY = 0,
+	    				lW = 0,
+	    				lH = 0;
+	    				
+	    				switch(_that.rotation){
+    			 			case 180:
+    			 				var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+    			 				lX = startX-(startX-center.x)*2;
+								lY = startY-(startY-center.y)*2;
+								lW = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
+								lH = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
+							break;
+							case 270:
+								var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+								lX = startX+(startY-center.y)-(startX-center.x);
+								lY = startY-(startX-center.x)-(startY-center.y);
+								lW = Math.abs(shape_vpoint.y-shape_vpoint2.y);
+								lH = -1*Math.abs(shape_vpoint.x-shape_vpoint2.x);
+							break;
+							case 90:
+								var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+								lX = startX-(startY-center.y)-(startX-center.x);
+								lY = startY+(startX-center.x)-(startY-center.y);
+								lW = -1*Math.abs(shape_vpoint.y-shape_vpoint2.y);
+								lH = Math.abs(shape_vpoint.x-shape_vpoint2.x);
+							break;
+							default:
+								lX = startX;
+								lY = startY;
+								lW = Math.abs(shape_vpoint.x-shape_vpoint2.x);
+								lH = Math.abs(shape_vpoint.y-shape_vpoint2.y);
+							break;
+    			 		}
+						if(!_that.restoreMoveAnno&&!_that.chkOverBounds()){
+							color = ERROR_COLOR_STROKE
+						}else{
+							color = DVDrawerUtil.toColor(_shape.color);								
+						}
+						//color = DVDrawerUtil.toColor(_shape.color);
+	    				DVDrawerUtil.drawRect(_context,lX,
+	    					lY,
+	    					lW,
+	    					lH,
+	    					color,_that.num);
+	    				
+	    			}
+                    
+                    this.addChild = function(){
+                        var annotaion = {
+                            "acid": "new",
+                            "action": false,
+                            "base64Enabled": null,
+                            "checkstatus": 0,
+                            "color": "15595649,13",
+                            "content": "",
+                            "dependentId": _anno.progressiveId,
+                            "formattedContent": "",
+                            "ignore": false,
+                            "lock": false,
+                            "page": _anno.page,
+                            "pageLabel": null,
+                            "playheadtime": null,
+                            "progressiveId": "new",
+                            "sceneX": _anno.sceneX,
+                            "sceneY": _anno.sceneY,
+                            "shape": {
+                                "color": "1",
+                                "type": ""
+                            },
+                            "taskId": "-1",
+                            "timestamp": new Date(),
+                            "type": null,
+                            "user": {
+				                "firstName": urlPara.forename?urlPara.forename:"",
+				                "id": urlPara.userId?urlPara.userId:"-1",
+				                "lastName": urlPara.surname?urlPara.forename:"",
+				                "loginName": null,
+				                "password": null
+				            }
+                        };
+                        _child = new DVNormalAnnoClass(viewer, annotaion);
+                        _child.draw();
                         
-                        this.addChild = function(){
-                            var annotaion = {
-                                "acid": "new",
-                                "action": false,
-                                "base64Enabled": null,
-                                "checkstatus": 0,
-                                "color": "15595649,13",
-                                "content": "",
-                                "dependentId": _anno.progressiveId,
-                                "formattedContent": "",
-                                "ignore": false,
-                                "lock": false,
-                                "page": _anno.page,
-                                "pageLabel": null,
-                                "playheadtime": null,
-                                "progressiveId": "new",
-                                "sceneX": _anno.sceneX,
-                                "sceneY": _anno.sceneY,
-                                "shape": {
-                                    "color": "1",
-                                    "type": ""
-                                },
-                                "taskId": "-1",
-                                "timestamp": new Date(),
-                                "type": null,
-                                "user": {
-                                    "firstName": "shinelen",
-                                    "id": "112",
-                                    "lastName": "Brüning",
-                                    "loginName": null,
-                                    "password": null
+                        if(viewer==dv_viewer){
+                            anno_drawer = dv_annos_drawer;
+                        }else if(viewer==dv_viewer1){
+                            anno_drawer = dv_annos_drawer1;
+                        }else if(viewer==dv_viewer2){
+                            anno_drawer = dv_annos_drawer2;
+                        }else if(viewer==dv_viewer_page){
+                            anno_drawer = dv_annos_drawer_page;
+                        }
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
+                            $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                var acid = item.getAcid();
+                                if(acid == "new"){
+                                    item.save();
                                 }
-                            };
-                            _child = new DVNormalAnnoClass(viewer, annotaion);
-                            _child.draw();
-                            
-                            if(viewer==dv_viewer){
-                                anno_drawer = dv_annos_drawer;
-                            }else if(viewer==dv_viewer1){
-                                anno_drawer = dv_annos_drawer1;
-                            }else if(viewer==dv_viewer2){
-                                anno_drawer = dv_annos_drawer2;
-                            }else if(viewer==dv_viewer_page){
-                                anno_drawer = dv_annos_drawer_page;
-                            }
-                            if(anno_drawer&&anno_drawer.getAnnotationList()){
-                                $.each(anno_drawer.getAnnotationList(),function(index,item){
-                                    var acid = item.getAcid();
-                                    if(acid == "new"){
-                                        item.save();
-                                    }
-                                });
+                            });
 
                                 anno_drawer.getAnnotationList().push(_child);
                             }
                         }
 		    		}
 
-			    	DVCircleAnnoClass = function(viewer,anno){
-		    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
-		    			var _that = this,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-		    			_anno = anno,
-		    			_shape;
-		    			this.moveShape = function(e){
-		    				var stype = _anno.shape.type,
-		    				stypes = stype.split(" ");
-		    				if(stypes&&stypes.length>=6){
-		    					stypes[2] = _anno.sceneX - parseFloat(stypes[4])/2;
-		    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
-		    				}
-		    				_anno.shape.type = stypes.join(" ")
+		    	DVCircleAnnoClass = function(viewer,anno){
+	    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
+	    			var _that = this,
+	    			_viewer = viewer,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+	    			_anno = anno,
+	    			urlPara = PUBLIC_CONFIGS.url_parmeters,
+	    			_shape;
+	    			this.moveShape = function(e){
+	    				var stype = _anno.shape.type,
+	    				stypes = stype.split(" ");
+	    				if(stypes&&stypes.length>=6){
+	    					stypes[2] = _anno.sceneX - parseFloat(stypes[4])/2;
+	    					stypes[3] = _anno.sceneY - parseFloat(stypes[5]);
+	    				}
+	    				_anno.shape.type = stypes.join(" ")
 
 		    			}
 		    			this.drawAnnoShape = function(){
@@ -2808,59 +3234,59 @@
 		    				
 		    			}
 
+                    
+                    this.addChild = function(){
+                        var annotaion = {
+                            "acid": "new",
+                            "action": false,
+                            "base64Enabled": null,
+                            "checkstatus": 0,
+                            "color": "15595649,13",
+                            "content": "",
+                            "dependentId": _anno.progressiveId,
+                            "formattedContent": "",
+                            "ignore": false,
+                            "lock": false,
+                            "page": _anno.page,
+                            "pageLabel": null,
+                            "playheadtime": null,
+                            "progressiveId": "new",
+                            "sceneX": _anno.sceneX,
+                            "sceneY": _anno.sceneY,
+                            "shape": {
+                                "color": "1",
+                                "type": ""
+                            },
+                            "taskId": "-1",
+                            "timestamp": new Date(),
+                            "type": null,
+                            "user": {
+				                "firstName": urlPara.forename?urlPara.forename:"",
+				                "id": urlPara.userId?urlPara.userId:"-1",
+				                "lastName": urlPara.surname?urlPara.forename:"",
+				                "loginName": null,
+				                "password": null
+				            }
+                        };
+                        _child = new DVNormalAnnoClass(viewer, annotaion);
+                        _child.draw();
                         
-                        this.addChild = function(){
-                            var annotaion = {
-                                "acid": "new",
-                                "action": false,
-                                "base64Enabled": null,
-                                "checkstatus": 0,
-                                "color": "15595649,13",
-                                "content": "",
-                                "dependentId": _anno.progressiveId,
-                                "formattedContent": "",
-                                "ignore": false,
-                                "lock": false,
-                                "page": _anno.page,
-                                "pageLabel": null,
-                                "playheadtime": null,
-                                "progressiveId": "new",
-                                "sceneX": _anno.sceneX,
-                                "sceneY": _anno.sceneY,
-                                "shape": {
-                                    "color": "1",
-                                    "type": ""
-                                },
-                                "taskId": "-1",
-                                "timestamp": new Date(),
-                                "type": null,
-                                "user": {
-                                    "firstName": "shinelen",
-                                    "id": "112",
-                                    "lastName": "Brüning",
-                                    "loginName": null,
-                                    "password": null
+                        if(viewer==dv_viewer){
+                            anno_drawer = dv_annos_drawer;
+                        }else if(viewer==dv_viewer1){
+                            anno_drawer = dv_annos_drawer1;
+                        }else if(viewer==dv_viewer2){
+                            anno_drawer = dv_annos_drawer2;
+                        }else if(viewer==dv_viewer_page){
+                            anno_drawer = dv_annos_drawer_page;
+                        }
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
+                            $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                var acid = item.getAcid();
+                                if(acid == "new"){
+                                    item.save();
                                 }
-                            };
-                            _child = new DVNormalAnnoClass(viewer, annotaion);
-                            _child.draw();
-                            
-                            if(viewer==dv_viewer){
-                                anno_drawer = dv_annos_drawer;
-                            }else if(viewer==dv_viewer1){
-                                anno_drawer = dv_annos_drawer1;
-                            }else if(viewer==dv_viewer2){
-                                anno_drawer = dv_annos_drawer2;
-                            }else if(viewer==dv_viewer_page){
-                                anno_drawer = dv_annos_drawer_page;
-                            }
-                            if(anno_drawer&&anno_drawer.getAnnotationList()){
-                                $.each(anno_drawer.getAnnotationList(),function(index,item){
-                                    var acid = item.getAcid();
-                                    if(acid == "new"){
-                                        item.save();
-                                    }
-                                });
+                            });
 
                                 anno_drawer.getAnnotationList().push(_child);
                             }
@@ -2868,24 +3294,25 @@
 
 		    		}
 
-			    	DVFreehandAnnoClass = function(viewer,anno){
-		    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
-		    			var _that = this,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-		    			_anno = anno,
-		    			_shape;
-		    			this.moveShape = function(e){
-		    				var stype = _anno.shape.type,
-		    				stypes = stype.split(" ");
-		    				if(stypes&&stypes.length>=6){
-		    					stypes[2] = _anno.sceneX;
-		    					stypes[3] = _anno.sceneY;
-		    				}
-		    				_anno.shape.type = stypes.join(" ")
+		    	DVFreehandAnnoClass = function(viewer,anno){
+	    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
+	    			var _that = this,
+	    			_viewer = viewer,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+	    			_anno = anno,
+	    			urlPara = PUBLIC_CONFIGS.url_parmeters,
+	    			_shape;
+	    			this.moveShape = function(e){
+	    				var stype = _anno.shape.type,
+	    				stypes = stype.split(" ");
+	    				if(stypes&&stypes.length>=6){
+	    					stypes[2] = _anno.sceneX;
+	    					stypes[3] = _anno.sceneY;
+	    				}
+	    				_anno.shape.type = stypes.join(" ")
 
 		    			}
 		    			this.drawAnnoShape = function(){
@@ -2921,60 +3348,60 @@
 							}
 		    				DVDrawerUtil.drawFreehand(_viewport,_context,_shape,_that.rotation,_that.num,color);
 
-		    			}
+	    			}
+                    
+                    this.addChild = function(){
+                        var annotaion = {
+                            "acid": "new",
+                            "action": false,
+                            "base64Enabled": null,
+                            "checkstatus": 0,
+                            "color": "15595649,13",
+                            "content": "",
+                            "dependentId": _anno.progressiveId,
+                            "formattedContent": "",
+                            "ignore": false,
+                            "lock": false,
+                            "page": _anno.page,
+                            "pageLabel": null,
+                            "playheadtime": null,
+                            "progressiveId": "new",
+                            "sceneX": _anno.sceneX,
+                            "sceneY": _anno.sceneY,
+                            "shape": {
+                                "color": "1",
+                                "type": ""
+                            },
+                            "taskId": "-1",
+                            "timestamp": new Date(),
+                            "type": null,
+                            "user": {
+				                "firstName": urlPara.forename?urlPara.forename:"",
+				                "id": urlPara.userId?urlPara.userId:"-1",
+				                "lastName": urlPara.surname?urlPara.forename:"",
+				                "loginName": null,
+				                "password": null
+				            }
+                        };
+                        _child = new DVNormalAnnoClass(viewer, annotaion);
+                        _child.draw();
                         
-                        this.addChild = function(){
-                            var annotaion = {
-                                "acid": "new",
-                                "action": false,
-                                "base64Enabled": null,
-                                "checkstatus": 0,
-                                "color": "15595649,13",
-                                "content": "",
-                                "dependentId": _anno.progressiveId,
-                                "formattedContent": "",
-                                "ignore": false,
-                                "lock": false,
-                                "page": _anno.page,
-                                "pageLabel": null,
-                                "playheadtime": null,
-                                "progressiveId": "new",
-                                "sceneX": _anno.sceneX,
-                                "sceneY": _anno.sceneY,
-                                "shape": {
-                                    "color": "1",
-                                    "type": ""
-                                },
-                                "taskId": "-1",
-                                "timestamp": new Date(),
-                                "type": null,
-                                "user": {
-                                    "firstName": "shinelen",
-                                    "id": "112",
-                                    "lastName": "Brüning",
-                                    "loginName": null,
-                                    "password": null
+                        if(viewer==dv_viewer){
+                            anno_drawer = dv_annos_drawer;
+                        }else if(viewer==dv_viewer1){
+                            anno_drawer = dv_annos_drawer1;
+                        }else if(viewer==dv_viewer2){
+                            anno_drawer = dv_annos_drawer2;
+                        }else if(viewer==dv_viewer_page){
+                            anno_drawer = dv_annos_drawer_page;
+                        }
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
+                            $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                var acid = item.getAcid();
+                                if(acid == "new"){
+                                    item.save();
                                 }
-                            };
-                            _child = new DVNormalAnnoClass(viewer, annotaion);
-                            _child.draw();
-                            
-                            if(viewer==dv_viewer){
-                                anno_drawer = dv_annos_drawer;
-                            }else if(viewer==dv_viewer1){
-                                anno_drawer = dv_annos_drawer1;
-                            }else if(viewer==dv_viewer2){
-                                anno_drawer = dv_annos_drawer2;
-                            }else if(viewer==dv_viewer_page){
-                                anno_drawer = dv_annos_drawer_page;
-                            }
-                            if(anno_drawer&&anno_drawer.getAnnotationList()){
-                                $.each(anno_drawer.getAnnotationList(),function(index,item){
-                                    var acid = item.getAcid();
-                                    if(acid == "new"){
-                                        item.save();
-                                    }
-                                });
+                            });
 
                                 anno_drawer.getAnnotationList().push(_child);
                             }
@@ -2983,24 +3410,25 @@
 
 		    		}
 
-			    	DVArrowAnnoClass = function(viewer,anno){
-		    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
-		    			var _that = this,
-		    			_viewer = viewer,
-	    			 	_drawer = _viewer.drawer,
-	    			 	_canvas = _drawer.canvas,
-	    			 	_context = _drawer.context,
-	    			 	_viewport = _viewer.viewport,
-		    			_anno = anno,
-		    			_shape;
-		    			this.moveShape = function(e){
-		    				var stype = _anno.shape.type,
-		    				stypes = stype.split(" ");
-		    				if(stypes&&stypes.length>=6){
-		    					stypes[2] = _anno.sceneX;
-		    					stypes[3] = _anno.sceneY;
-		    				}
-		    				_anno.shape.type = stypes.join(" ")
+		    	DVArrowAnnoClass = function(viewer,anno){
+	    			DVAnnotationClass.prototype.constructor.call(this,viewer,anno);
+	    			var _that = this,
+	    			_viewer = viewer,
+    			 	_drawer = _viewer.drawer,
+    			 	_canvas = _drawer.canvas,
+    			 	_context = _drawer.context,
+    			 	_viewport = _viewer.viewport,
+	    			_anno = anno,
+	    			urlPara = PUBLIC_CONFIGS.url_parmeters,
+	    			_shape;
+	    			this.moveShape = function(e){
+	    				var stype = _anno.shape.type,
+	    				stypes = stype.split(" ");
+	    				if(stypes&&stypes.length>=6){
+	    					stypes[2] = _anno.sceneX;
+	    					stypes[3] = _anno.sceneY;
+	    				}
+	    				_anno.shape.type = stypes.join(" ")
 
 		    			}
 		    			this.drawAnnoShape = function(){
@@ -3014,67 +3442,69 @@
 							}
 		    				DVDrawerUtil.drawArrow(_viewport,_context,_shape,_that.rotation,_that.num,color);
 
-		    			}
+	    			}
+                    
+                    this.addChild = function(){
+                        var annotaion = {
+                            "acid": "new",
+                            "action": false,
+                            "base64Enabled": null,
+                            "checkstatus": 0,
+                            "color": "15595649,13",
+                            "content": "",
+                            "dependentId": _anno.progressiveId,
+                            "formattedContent": "",
+                            "ignore": false,
+                            "lock": false,
+                            "page": _anno.page,
+                            "pageLabel": null,
+                            "playheadtime": null,
+                            "progressiveId": "new",
+                            "sceneX": _anno.sceneX,
+                            "sceneY": _anno.sceneY,
+                            "shape": {
+                                "color": "1",
+                                "type": ""
+                            },
+                            "taskId": "-1",
+                            "timestamp": new Date(),
+                            "type": null,
+                            "user": {
+				                "firstName": urlPara.forename?urlPara.forename:"",
+				                "id": urlPara.userId?urlPara.userId:"-1",
+				                "lastName": urlPara.surname?urlPara.forename:"",
+				                "loginName": null,
+				                "password": null
+				            }
+                        };
+                        _child = new DVNormalAnnoClass(viewer, annotaion);
+                        _child.draw();
                         
-                        this.addChild = function(){
-                            var annotaion = {
-                                "acid": "new",
-                                "action": false,
-                                "base64Enabled": null,
-                                "checkstatus": 0,
-                                "color": "15595649,13",
-                                "content": "",
-                                "dependentId": _anno.progressiveId,
-                                "formattedContent": "",
-                                "ignore": false,
-                                "lock": false,
-                                "page": _anno.page,
-                                "pageLabel": null,
-                                "playheadtime": null,
-                                "progressiveId": "new",
-                                "sceneX": _anno.sceneX,
-                                "sceneY": _anno.sceneY,
-                                "shape": {
-                                    "color": "1",
-                                    "type": ""
-                                },
-                                "taskId": "-1",
-                                "timestamp": new Date(),
-                                "type": null,
-                                "user": {
-                                    "firstName": "shinelen",
-                                    "id": "112",
-                                    "lastName": "Brüning",
-                                    "loginName": null,
-                                    "password": null
+                        if(viewer==dv_viewer){
+                            anno_drawer = dv_annos_drawer;
+                        }else if(viewer==dv_viewer1){
+                            anno_drawer = dv_annos_drawer1;
+                        }else if(viewer==dv_viewer2){
+                            anno_drawer = dv_annos_drawer2;
+                        }else if(viewer==dv_viewer_page){
+                            anno_drawer = dv_annos_drawer_page;
+                        }
+                        if(anno_drawer&&anno_drawer.getAnnotationList()){
+                            $.each(anno_drawer.getAnnotationList(),function(index,item){
+                                var acid = item.getAcid();
+                                if(acid == "new"){
+                                    item.save();
                                 }
-                            };
-                            _child = new DVNormalAnnoClass(viewer, annotaion);
-                            _child.draw();
-                            
-                            if(viewer==dv_viewer){
-                                anno_drawer = dv_annos_drawer;
-                            }else if(viewer==dv_viewer1){
-                                anno_drawer = dv_annos_drawer1;
-                            }else if(viewer==dv_viewer2){
-                                anno_drawer = dv_annos_drawer2;
-                            }else if(viewer==dv_viewer_page){
-                                anno_drawer = dv_annos_drawer_page;
-                            }
-                            if(anno_drawer&&anno_drawer.getAnnotationList()){
-                                $.each(anno_drawer.getAnnotationList(),function(index,item){
-                                    var acid = item.getAcid();
-                                    if(acid == "new"){
-                                        item.save();
-                                    }
-                                });
+                            });
 
                                 anno_drawer.getAnnotationList().push(_child);
                             }
                         }
 		    		}
 
+	    		DVCommentClass = function(anno){
 
+	    		}
 		    		// Inherit DVAnnotationClass
 					DVUtil.extend(DVAnnotationClass,DVNormalAnnoClass);
 					DVUtil.extend(DVAnnotationClass,DVRectangleAnnoClass);
@@ -3366,253 +3796,225 @@
                                 num2_suf = num2_group[1];
                             var result;
 
-                            if(!num1_suf || !num2_suf){
-                                if(parseInt(num1_pre) < parseInt(num2_pre)){
+                        if(!num1_suf || !num2_suf){
+                            if(parseInt(num1_pre) < parseInt(num2_pre)){
+                                result = -1;
+                            }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                                result = 1;
+                            }else if(parseInt(num1_pre) == parseInt(num2_pre)){
+                                if(!num1_suf){
                                     result = -1;
-                                }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                                }else if(!num2_suf){
                                     result = 1;
-                                }else if(parseInt(num1_pre) == parseInt(num2_pre)){
-                                    if(!num1_suf){
-                                        result = -1;
-                                    }else if(!num2_suf){
-                                        result = 1;
-                                    }
-                                }
-                            }else{
-                                var temp1_pre = parseInt(num1_pre),
-                                    temp2_pre = parseInt(num2_pre),
-                                    temp1_suf = parseInt(num1_suf),
-                                    temp2_suf = parseInt(num2_suf);
-                                if(temp1_pre < temp2_pre){
-                                    result = -1;
-                                }else if(temp1_pre > temp2_pre){
-                                    result = 1;
-                                }else if(temp1_pre == temp2_pre){
-                                    if(temp1_suf < temp2_suf){
-                                        result = -1;
-                                    }else{
-                                        result = 1;
-                                    }
                                 }
                             }
-                            console.log("num1_group---->" + num1_group + "\n" +
-                                        "num1_pre------>" + num1_pre + "\n" +
-                                        "num1_suf------>" + num1_suf + "\n" +
-                                        "num2_group---->" + num2_group + "\n" +
-                                        "num2_pre------>" + num2_pre + "\n" +
-                                        "num2_suf------>" + num2_suf + "\n" +
-                                        "result-------->" + result);
-                            return result;
-                            
-//		    				num1 = num1?parseInt(num1):0;
-//		    				num2 = num2?parseInt(num2):0;
-//		    				if(num1==0){
-//		    					return -1;
-//		    				}
-//		    				if(num2==0){
-//		    					return 1;
-//		    				}
-//		    				if (num1 < num2) {
-//			    				return -1;
-//			    			} else if (num1 > num2) {
-//			    				return 1;
-//			    			} 
-		    			}
-                        //倒序ID排序
-                        function _compareReverseNum(num1,num2){
-                            var num1_group = num1.split("."),
-                                num2_group = num2.split(".");
-                            var num1_pre = num1_group[0],
-                                num1_suf = num1_group[1],
-                                num2_pre = num2_group[0],
-                                num2_suf = num2_group[1];
-                            var result;
+                        }else{
+                            var temp1_pre = parseInt(num1_pre),
+                                temp2_pre = parseInt(num2_pre),
+                                temp1_suf = parseInt(num1_suf),
+                                temp2_suf = parseInt(num2_suf);
+                            if(temp1_pre < temp2_pre){
+                                result = -1;
+                            }else if(temp1_pre > temp2_pre){
+                                result = 1;
+                            }else if(temp1_pre == temp2_pre){
+                                if(temp1_suf < temp2_suf){
+                                    result = -1;
+                                }else{
+                                    result = 1;
+                                }
+                            }
+                        }
+                        console.log("num1_group---->" + num1_group + "\n" +
+                                    "num1_pre------>" + num1_pre + "\n" +
+                                    "num1_suf------>" + num1_suf + "\n" +
+                                    "num2_group---->" + num2_group + "\n" +
+                                    "num2_pre------>" + num2_pre + "\n" +
+                                    "num2_suf------>" + num2_suf + "\n" +
+                                    "result-------->" + result);
+                        return result;
+	    			}
+                    //倒序ID排序
+                    function _compareReverseNum(num1,num2){
+                        var num1_group = num1.split("."),
+                            num2_group = num2.split(".");
+                        var num1_pre = num1_group[0],
+                            num1_suf = num1_group[1],
+                            num2_pre = num2_group[0],
+                            num2_suf = num2_group[1];
+                        var result;
 
-                            if(!num1_suf || !num2_suf){
-                                if(parseInt(num1_pre) < parseInt(num2_pre)){
-                                    result = 1;
-                                }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                        if(!num1_suf || !num2_suf){
+                            if(parseInt(num1_pre) < parseInt(num2_pre)){
+                                result = 1;
+                            }else if(parseInt(num1_pre) > parseInt(num2_pre)){
+                                result = -1;
+                            }else if(parseInt(num1_pre) == parseInt(num2_pre)){
+                                if(!num1_suf){
                                     result = -1;
-                                }else if(parseInt(num1_pre) == parseInt(num2_pre)){
-                                    if(!num1_suf){
-                                        result = -1;
-                                    }else if(!num2_suf){
-                                        result = 1;
-                                    }
-                                }
-                            }else{
-                                var temp1_pre = parseInt(num1_pre),
-                                    temp2_pre = parseInt(num2_pre),
-                                    temp1_suf = parseInt(num1_suf),
-                                    temp2_suf = parseInt(num2_suf);
-                                if(temp1_pre < temp2_pre){
+                                }else if(!num2_suf){
                                     result = 1;
-                                }else if(temp1_pre > temp2_pre){
-                                    result = -1;
-                                }else if(temp1_pre == temp2_pre){
-                                    if(temp1_suf < temp2_suf){
-                                        result = -1;
-                                    }else{
-                                        result = 1;
-                                    }
                                 }
                             }
-                            console.log("num1_group---->" + num1_group + "\n" +
-                                        "num1_pre------>" + num1_pre + "\n" +
-                                        "num1_suf------>" + num1_suf + "\n" +
-                                        "num2_group---->" + num2_group + "\n" +
-                                        "num2_pre------>" + num2_pre + "\n" +
-                                        "num2_suf------>" + num2_suf + "\n" +
-                                        "result-------->" + result);
-                            return result;
-                            
-//		    				num1 = num1?parseInt(num1):0;
-//		    				num2 = num2?parseInt(num2):0;
-//		    				if(num1==0){
-//		    					return -1;
-//		    				}
-//		    				if(num2==0){
-//		    					return 1;
-//		    				}
-//		    				if (num1 < num2) {
-//			    				return -1;
-//			    			} else if (num1 > num2) {
-//			    				return 1;
-//			    			} 
-		    			}
-		    			/*
-					* 对比单个数据并进行排序
-					*/
-		    			function _compare(str1, str2) {
-		    				if(str1 == null || str1.length == 0){
-		    					return -1 ;
-		    				}
-		    				if(str2 == null || str2.length == 0){
-		    					return 1 ;
-		    				}
-		    				var len = str1.length > str2.length ? str1.length : str2.length ;
-		    				for(var i = 0 ; i < len ; i++){
-		    					if (str1[i] < str2[i]) {
-				    				return -1;
-				    			} else if (str1[i] > str2[i]) {
-				    				return 1;
-				    			} 
-		    				}
-		    				
-		    			};
-		    			
-		    			this.createElement = function(){
-		    				// dv_annotations annotation list data
-		    				_fileName = eu.div("fileName")
-		    				_table = eu.table("table table-bordered table-hover table-striped",null,{"background-color":"#FFFFFF"});
-		    				_thead = eu.thead();
-		    				_tbody = eu.tbody();
-		    				_thead.append(
-		    					eu.tr().append(
-		    						eu.th().append(eu.div().width(_listWidth*0.2).append("ID")).css({"padding":"0px"}).click(function(){
-		    							var sortIndex = _that.getTable().find("th").index($(this)) ;
-		    							$(this).parent().find("span").remove();
-		    							var sort = _that.getSort() ;
-		    							if(_that.getSortIndex() == sortIndex){
-		    								if(sort != true){
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true,true);
-		    								}else{
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false,true);
-		    								}
-		    							}else{
-		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true,true);
-		    							}
-		    						})	
-			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.1).html("&nbsp;")).css({"padding":"0px"})	
-			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.1).text("Pg")).css({"padding":"0px"}).click(function(){
-			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
-		    							$(this).parent().find("span").remove();
-		    							var sort = _that.getSort() ;
-		    							if(_that.getSortIndex() == sortIndex){
-		    								if(sort != true){
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true);
-		    								}else{
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false);
-		    								}
-		    							}else{
-		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true);
-		    							}
-		    						})	
-			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("First Name")).css({"padding":"0px"}).click(function(){
-			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
-		    							$(this).parent().find("span").remove();
-		    							var sort = _that.getSort() ;
-		    							if(_that.getSortIndex() == sortIndex){
-		    								if(sort != true){
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true);
-		    								}else{
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false);
-		    								}
-		    							}else{
-		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true);
-		    							}
-		    						})		
-			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Last Name")).css({"padding":"0px"}).click(function(){
-			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
-		    							$(this).parent().find("span").remove();
-		    							var sort = _that.getSort() ;
-		    							if(_that.getSortIndex() == sortIndex){
-		    								if(sort != true){
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true);
-		    								}else{
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false);
-		    								}
-		    							}else{
-		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true);
-		    							}
-		    						})	
-			    				).append(
-			    					eu.th().append(eu.div().width(_listWidth*0.2).text("Content")).css({"padding":"0px"}).click(function(){
-			    						var sortIndex = _that.getTable().find("th").index($(this)) ;
-		    							$(this).parent().find("span").remove();
-		    							var sort = _that.getSort() ;
-		    							if(_that.getSortIndex() == sortIndex){
-		    								if(sort != true){
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,true);
-		    								}else{
-		    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
-		    									_that.sortDate(sortIndex,false);
-		    								}
-		    							}else{
-		    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
-		    								_that.sortDate(sortIndex,true);
-		    							}
-		    						})	
-			    				)
+                        }else{
+                            var temp1_pre = parseInt(num1_pre),
+                                temp2_pre = parseInt(num2_pre),
+                                temp1_suf = parseInt(num1_suf),
+                                temp2_suf = parseInt(num2_suf);
+                            if(temp1_pre < temp2_pre){
+                                result = 1;
+                            }else if(temp1_pre > temp2_pre){
+                                result = -1;
+                            }else if(temp1_pre == temp2_pre){
+                                if(temp1_suf < temp2_suf){
+                                    result = -1;
+                                }else{
+                                    result = 1;
+                                }
+                            }
+                        }
+                        console.log("num1_group---->" + num1_group + "\n" +
+                                    "num1_pre------>" + num1_pre + "\n" +
+                                    "num1_suf------>" + num1_suf + "\n" +
+                                    "num2_group---->" + num2_group + "\n" +
+                                    "num2_pre------>" + num2_pre + "\n" +
+                                    "num2_suf------>" + num2_suf + "\n" +
+                                    "result-------->" + result);
+                        return result; 
+	    			}
+	    		/*
+				* 对比单个数据并进行排序
+				*/
+	    			function _compare(str1, str2) {
+	    				if(str1 == null || str1.length == 0){
+	    					return -1 ;
+	    				}
+	    				if(str2 == null || str2.length == 0){
+	    					return 1 ;
+	    				}
+	    				var len = str1.length > str2.length ? str1.length : str2.length ;
+	    				for(var i = 0 ; i < len ; i++){
+	    					if (str1[i] < str2[i]) {
+			    				return -1;
+			    			} else if (str1[i] > str2[i]) {
+			    				return 1;
+			    			} 
+	    				}
+	    				
+	    			};
+	    			
+	    			this.createElement = function(){
+	    				// dv_annotations annotation list data
+	    				_fileName = eu.div("fileName")
+	    				_table = eu.table("table table-bordered table-hover table-striped",null,{"background-color":"#FFFFFF"});
+	    				_thead = eu.thead();
+	    				_tbody = eu.tbody();
+	    				_thead.append(
+	    					eu.tr().append(
+	    						eu.th().append(eu.div().width(_listWidth*0.2).append("ID")).css({"padding":"0px"}).click(function(){
+	    							var sortIndex = _that.getTable().find("th").index($(this)) ;
+	    							$(this).parent().find("span").remove();
+	    							var sort = _that.getSort() ;
+	    							if(_that.getSortIndex() == sortIndex){
+	    								if(sort != true){
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,true,true);
+	    								}else{
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,false,true);
+	    								}
+	    							}else{
+	    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    								_that.sortDate(sortIndex,true,true);
+	    							}
+	    						})	
+		    				).append(
+		    					eu.th().append(eu.div().width(_listWidth*0.1).html("&nbsp;")).css({"padding":"0px"})	
+		    				).append(
+		    					eu.th().append(eu.div().width(_listWidth*0.1).text("Pg")).css({"padding":"0px"}).click(function(){
+		    						var sortIndex = _that.getTable().find("th").index($(this)) ;
+	    							$(this).parent().find("span").remove();
+	    							var sort = _that.getSort() ;
+	    							if(_that.getSortIndex() == sortIndex){
+	    								if(sort != true){
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,true);
+	    								}else{
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,false);
+	    								}
+	    							}else{
+	    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    								_that.sortDate(sortIndex,true);
+	    							}
+	    						})	
+		    				).append(
+		    					eu.th().append(eu.div().width(_listWidth*0.2).text("First Name")).css({"padding":"0px"}).click(function(){
+		    						var sortIndex = _that.getTable().find("th").index($(this)) ;
+	    							$(this).parent().find("span").remove();
+	    							var sort = _that.getSort() ;
+	    							if(_that.getSortIndex() == sortIndex){
+	    								if(sort != true){
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,true);
+	    								}else{
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,false);
+	    								}
+	    							}else{
+	    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    								_that.sortDate(sortIndex,true);
+	    							}
+	    						})		
+		    				).append(
+		    					eu.th().append(eu.div().width(_listWidth*0.2).text("Last Name")).css({"padding":"0px"}).click(function(){
+		    						var sortIndex = _that.getTable().find("th").index($(this)) ;
+	    							$(this).parent().find("span").remove();
+	    							var sort = _that.getSort() ;
+	    							if(_that.getSortIndex() == sortIndex){
+	    								if(sort != true){
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,true);
+	    								}else{
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,false);
+	    								}
+	    							}else{
+	    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    								_that.sortDate(sortIndex,true);
+	    							}
+	    						})	
+		    				).append(
+		    					eu.th().append(eu.div().width(_listWidth*0.2).text("Content")).css({"padding":"0px"}).click(function(){
+		    						var sortIndex = _that.getTable().find("th").index($(this)) ;
+	    							$(this).parent().find("span").remove();
+	    							var sort = _that.getSort() ;
+	    							if(_that.getSortIndex() == sortIndex){
+	    								if(sort != true){
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,true);
+	    								}else{
+	    									$(this).append(eu.span("glyphicon glyphicon-arrow-down").attr("aria-hidden","true"))
+	    									_that.sortDate(sortIndex,false);
+	    								}
+	    							}else{
+	    								$(this).append(eu.span("glyphicon glyphicon-arrow-up").attr("aria-hidden","true"))
+	    								_that.sortDate(sortIndex,true);
+	    							}
+	    						})	
 		    				)
-		    				_table.append(_thead)
-		    				.append(_tbody);
-		    				_element = eu.div();
-		    				_element.append(_fileName).append(eu.div().append(_table));
-		    				return _element;
-		    			}
-		    			/**
-		    			 * [updData ]
-		    			 * @return {[type]} [description]
-		    			 */
-		    			this.updData = function(page){
+	    				)
+	    				_table.append(_thead)
+	    				.append(_tbody);
+	    				_element = eu.div();
+	    				_element.append(_fileName).append(eu.div().append(_table));
+	    				return _element;
+	    			}
+	    			/**
+	    			 * [updData ]
+	    			 * @return {[type]} [description]
+	    			 */
+	    			this.updData = function(page){
 
 		    				_fileName.empty();
 		    				_tbody.empty();
@@ -3927,6 +4329,12 @@
 
 		    	})(DVTableList,DVEleUtil);
 
+		    	/**
+		    	 * 该内包封装的顶部按钮组
+		    	 * @param  {[DVToolbar]} DVToolbar [description]
+		    	 * @param  {[DVEleUtil]} eu      [基本控件的封装]
+		    	 * @return {[none]}         [description]
+		    	 */
 		    	(function(toolbar,eu){
 		    		var _toolbarBtnlist = [],
 		    		_navbar_header_div,
@@ -4520,6 +4928,7 @@
 			    					dv_viewer_page.viewport.setRotation(_rotation);
 			    					dv_annos_drawer_page?dv_annos_drawer_page.draw():null;
 			    				}
+			    				DVHistory.addRotateRecord(dv_viewer,_rotation-ROTATION);
 			    			}else if(dv_brand==BRAND_COMPARE){
 			    				var _viewport = (dv_viewer1&&dv_viewer1.viewport)?dv_viewer1.viewport:dv_viewer2.viewport;
 			    				_rotation = _viewport.getRotation()+ROTATION;
@@ -4529,14 +4938,17 @@
 								if(dv_viewer1&&dv_viewer1.viewport){
 			    					dv_viewer1.viewport.setRotation(_rotation);
 			    					dv_annos_drawer1?dv_annos_drawer1.draw():null;
+			    					DVHistory.addRotateRecord(dv_viewer1,_rotation-ROTATION);
 			    				}
 			    				if(dv_viewer2&&dv_viewer2.viewport){
 			    					dv_viewer2.viewport.setRotation(_rotation);
 			    					dv_annos_drawer2?dv_annos_drawer2.draw():null;
+			    					DVHistory.addRotateRecord(dv_viewer2,_rotation-ROTATION);
 			    				}
 			    				if(dv_viewer_page&&dv_viewer_page.viewport){
 			    					dv_viewer_page.viewport.setRotation(_rotation);
 			    					dv_annos_drawer_page?dv_annos_drawer_page.draw():null;
+			    					DVHistory.addRotateRecord(dv_viewer_page,_rotation-ROTATION);
 			    				}			    				
 			    			}
 			    		}
@@ -4739,17 +5151,15 @@
 			    			_element.append(_a);
 			    			return _element;
 			    		}
-			    		function _clickEvent(e){
-			    			var s = DVUtil.getCurrentStatus();
+		    		function _clickEvent(e){
+		    			var s = DVUtil.getCurrentStatus();
 
-			    			if(_that.isActive){			    				
-			    				_that.cancel();
-			    			}else{			    				
-			    				_that.active();
-			    			}
-//			    			_that.isActive = !_that.isActive;
-
-			    		}
+		    			if(_that.isActive){			    				
+		    				_that.cancel();
+		    			}else{			    				
+		    				_that.active();
+		    			}
+		    		}
 			    		this.active = function(){
 			    			
 			    			DVToolbar.Toolbar.getDVToolAnno().cancel();
@@ -4934,12 +5344,14 @@
 			    		var _that = this;
 			    		_that.btnICON = ICON_RULER;
 			    		_that.isActive = false;
+			    		_that.originalImg = null;
 			    		function _clickEvent(e){
 			    			var s = DVUtil.getCurrentStatus();
 
 			    			if(_that.isActive){			    				
 			    				_that.cancel();
-			    			}else{			    				
+			    			}else{			    		
+			    				DVToolbar.Toolbar.removeAllBtnsActiveExcept(_that);		
 			    				_that.active();
 			    			}
 //			    			_that.isActive = !_that.isActive;
@@ -4947,7 +5359,7 @@
 			    		}
 			    		this.active = function(){
 			    			
-			    			DVToolbar.Toolbar.getDVMeasure().cancel();
+			    			_that.cancel();
 			    			_that.getElement().addClass("active");
 			    			_that.isActive = true;
 			    			dv_toolbar_action = TOOL_MEASURE;
@@ -4956,7 +5368,10 @@
 			    			dv_toolbar_action==TOOL_MEASURE?dv_toolbar_action = TOOL_NONE:null;
 			    			_that.getElement().removeClass("active");
 			    			_that.isActive = false;
+			    			jQuery(".dv-measure-main").remove();
+			    			_that.cancelRewrite();
 			    		}
+			    		this.cancelRewrite = function(){}
 
 			    		this.initEvents = function(){
 			    			_that.getElement().bind("click",{},_clickEvent)
@@ -5112,7 +5527,6 @@
 				    			
 				    			function _saveBtnClickEvent(e){
 				    				var urlPara = PUBLIC_CONFIGS.url_parmeters;
-				    				alert(PUBLIC_CONFIGS.proj_id);
 				    				$(this).attr("disabled","true");
 									//error:For input string: "English"			    				
 									var	action = "w";		    				
@@ -5126,6 +5540,14 @@
 									var user_first_name = urlPara.forename?urlPara.forename:"";
 									var user_last_name = urlPara.surname?urlPara.surname:"",
 									disable_sync_pages_check = 0;
+									var dfsa = def_anno_font_size.val(),
+									dfsaNum = 0;
+									if(dfsa==10)
+										dfsaNum = 0;
+									if(dfsa==13.5)
+										dfsaNum = 1;
+									if(dfsa==18)
+										dfsaNum = 2;
 				    				DVUtil.callJSON("userpreference.davinci",{
 				    					"sessionid":PUBLIC_CONFIGS.session_id,
 				    					"dataType":DATA_TYPE,
@@ -5138,7 +5560,7 @@
 				    					"draw_color":draw_color,
 				    					"open_annotation":open_annotation.is(':checked') ? 1:0 ,
 				    					"zoom_enable":zoom_enable.is(':checked') ? 1:0,
-				    					"def_anno_font_size":def_anno_font_size.val(),
+				    					"def_anno_font_size":dfsaNum,
 				    					"disable_spell_check":disable_spell_check.is(':checked') ? 1:0,
 				    					"show_points":show_points.is(':checked') ? 1:0,
 				    					"spell_check_type":spell_check_type.val(),
@@ -5204,7 +5626,11 @@
 					    			//dv_user_preference.spell_check_type
 					    			//dv_user_preference.sens_value
 					    			//dv_user_preference.disable_anno_hover_popup
-					    			if(dv_user_preference.measurement_units==1){measurementUnits_inches.attr("checked","true")};
+					    			if(dv_user_preference.measurement_units==1){
+					    				measurementUnits_inches.attr("checked","true");
+					    			}else{
+					    				measurement_units_mm.attr("checked","true");
+					    			}
 					    			if(dv_user_preference.open_annotation ==1){open_annotation.attr("checked","true")};
 					    			if(dv_user_preference.show_points ==1){show_points.attr("checked","true")};
 					    			if(dv_user_preference.zoom_enable ==1){zoom_enable.attr("checked","true")};
@@ -5306,7 +5732,7 @@
 					    			)
 					    			jq_content.append(
 					    				eu.div("form-group").append(
-						    				eu.label("col-sm-6 control-label").text("Ebable Spell Check?")
+						    				eu.label("col-sm-6 control-label").text("Enable Spell Check?")
 						    			).append(
 						    				eu.div("col-sm-6").append(
 						    					eu.div("checkbox").append(
@@ -5437,6 +5863,29 @@
 			    		DVToolBtnClass.prototype.constructor.call(this);
 			    		var _that = this;
 			    		this.btnICON = ICON_BACK;
+			    		this.initEvents = function(){
+			    			_that.disabledBtn();
+			    			_that.getElement().bind("click",{},_clickEvent);
+			    		}
+			    		
+			    		function _clickEvent(e){
+			    			var r_len = DVHistory.back();
+			    			if(r_len>0){
+			    				_that.enabledBtn();
+			    			}else{
+			    				_that.disabledBtn();
+			    			}
+			    		}
+
+			    		this.disabledBtn = function(){
+			    			_that.getElement().css({"opacity":"0.3"})
+			    		}
+
+			    		this.enabledBtn = function(){
+			    			_that.getElement().css({"opacity":"1"})
+			    		}
+
+			    		
 		    		}
 
 			    	DVToolApprovalClass = function(){
@@ -5604,6 +6053,12 @@
 
 		    	})(DVToolbar,DVEleUtil);
 
+		    	/**
+		    	 * 该内包封装的底部按钮组
+		    	 * @param  {[DVBottomToolBtnClass]} DVBottomToolBtn [description]
+		    	 * @param  {[DVEleUtil]} eu      [基本控件的封装]
+		    	 * @return {[none]}         [description]
+		    	 */
 		    	(function(btb,eu){
 		    		var _hideShowDiv,
 		    		_hideShowSpan,
@@ -5804,23 +6259,384 @@
 
 		    	})(DVBottomToolbar,DVEleUtil);
 
+
+				(function(u,eu){
+					DVMeasureEleClass = function(viewer){
+						var _that = this,
+						jq_main,
+						jq_l_span1,
+						jq_l_span2,
+						jq_l_span3,
+						jq_r_span1,
+						jq_r_span2,
+						jq_r_span3,
+						jq_add_link,
+						jq_svg,
+						jq_rect,
+						jq_line,
+						_dvCanvas,
+						_dvContext,
+						_dvImageData,
+						downX,downY,
+						offset = 20,
+						INCHES_MM = 25.4,
+						OUT_BOUND_TEXT = "out",
+						cors = {
+							l1:0,
+							x1:0,
+							y1:0,
+							l2:0,
+							x2:0,
+							y2:0
+						},
+						anno_text,
+						anno_text_html,
+						_vpoint_mousedown,
+						_vpoint_mouseup,
+						_chkBounds = false;
+
+
+						_that.element = null;
+						
+						if(viewer==dv_viewer){
+							_dvCanvas = dv_jq_canvas;
+							_that.num = 0;							
+							_dvImageData = dv_image_data;
+								    					
+						}else if(viewer==dv_viewer1){
+							_dvCanvas = dv_jq_canvas1;
+							_that.num = 0;
+							_dvImageData = dv_image_data1;
+						}else if(viewer==dv_viewer2){
+							_dvCanvas = dv_jq_canvas2;
+							_that.num = 1;	
+							_dvImageData = dv_image_data2;						
+						}else if(viewer==dv_viewer_page){		 
+							_dvCanvas = dv_jq_canvas_page;
+							_dvImageData = dv_image_data_page;
+						}
+						_dvContext = viewer.drawer.context;
+						function _createElement(){
+							var unit1 = (dv_user_preference&&dv_user_preference.measurement_units==MEASURE_IMPERIAL)?MEASURE_INCHES:MEASURE_MM,
+							unit2 = MEASURE_POINTS,
+							showPoint = (dv_user_preference&&dv_user_preference.show_points==1),
+							jq_leftside;
+							_that.clear();
+							_that.element = jq_main = eu.div("dv-measure-main");
+							jq_main
+							.append(
+								eu.div("title")
+								.append(
+									eu.span()
+									.text("Measurement Detail")
+								)
+								.append(
+									jq_add_link = eu.a(null,{"href":"javascript:void(0)"})
+									.text("add to annotation")
+								)
+							)
+							.append(
+								jq_leftside = eu.div("left-side")
+								.append(
+									eu.div("row")
+									.append(eu.label().text("L"))
+									.append(
+										jq_l_span1 = eu.span()
+									)
+									.append(eu.label().text(unit1))
+								)
+								.append(
+									eu.div("row")
+									.append(eu.label().text("X"))
+									.append(
+										jq_l_span2 = eu.span()
+									)
+									.append(eu.label().text(unit1))
+								)
+								.append(
+									eu.div("row")
+									.append(eu.label().text("Y"))
+									.append(
+										jq_l_span3 = eu.span()
+									)
+									.append(eu.label().text(unit1))
+								)
+							).append(
+								eu.div("right-side")
+								.append(
+									eu.div("row")
+									.append(eu.label().text("L"))
+									.append(
+										jq_r_span1 = eu.span()
+									)
+									.append(eu.label().text(unit2))
+								)
+								.append(
+									eu.div("row")
+									.append(eu.label().text("X"))
+									.append(
+										jq_r_span2 = eu.span()
+									)
+									.append(eu.label().text(unit2))
+								)
+								.append(
+									eu.div("row")
+									.append(eu.label().text("Y"))
+									.append(
+										jq_r_span3 = eu.span()
+									)
+									.append(eu.label().text(unit2))
+								)
+							);
+							if(!showPoint){
+								jq_main.addClass("full");
+							}
+							if(DVUtil.chkAction("Measurement and Save Annotation")){
+								jq_add_link.remove();
+								jq_add_link = null;
+							}else{
+								jq_add_link.bind("click",function(){
+									_saveToAnno();
+								});
+								jq_add_link.hide();
+							}
+
+						}
+						function _updCorNum(){
+							if(cors){
+								jq_l_span1.text(cors.l1);
+								jq_l_span2.text(cors.x1);
+								jq_l_span3.text(cors.y1);
+								jq_r_span1.text(cors.l2);
+								jq_r_span2.text(cors.x2);
+								jq_r_span3.text(cors.y2);
+							}
+						}
+						function _saveToAnno(){
+							var _page = 1;
+							if(viewer==dv_viewer){
+								_page = dv_page.page1;
+							}else if(viewer==dv_viewer1){
+								_page = dv_page1.page1;
+							}else if(viewer==dv_viewer2){
+								_page = dv_page2.page1;
+							}else if(viewer==dv_viewer_page){
+								if(dv_brand==BRAND){								
+									_page = dv_page.page2;								
+								}else if(dv_brand==BRAND_COMPARE){
+									if(dv_current_num.length==1&&dv_current_num[0]==1){
+										_page = dv_page1.page2;
+									}else if(dv_current_num.length==1&&dv_current_num[0]==2){
+										_page = dv_page2.page2;
+									}
+								}
+							}
+							urlPara = PUBLIC_CONFIGS.url_parmeters,
+							lX = 0,
+							lY = 0,
+							annotaion = {
+									"acid": "new",
+									"action": false,
+									"base64Enabled": null,
+									"checkstatus": 0,
+									"color": "15595649,13",
+									"content": base64encode(anno_text),
+									"dependentId": 0,
+									"formattedContent": base64encode(anno_text_html),
+									"ignore": false,
+									"lock": false,
+									"page": _page,
+									"pageLabel": null,
+									"playheadtime": null,
+									"progressiveId": "new",
+									"sceneX": 0,
+									"sceneY": 0,
+									"shape": {
+										"color": "1",
+										"type": ""
+									},
+									"taskId": "-1",
+									"timestamp": new Date(),
+									"type": null,
+									"user": {
+										"firstName": urlPara.forename,
+										"id": urlPara.userId?urlPara.userId:"-1",
+										"lastName": urlPara.surname,
+										"loginName": null,
+										"password": null
+									}
+								},_anno,
+							_image_data_temp = _context.getImageData(0, 0,_canvas.width,_canvas.height),
+							draw_color = dv_user_preference.draw_color.replace("0x","#"),
+							draw_color16 = dv_user_preference.draw_color.replace("0x",""),
+							draw_color10 = parseInt(draw_color16,16),
+							anno_color = dv_user_preference.annotation_color.replace("0x",""),
+							anno_color10 = parseInt(anno_color,16),
+							sencePoint = DVDrawerUtil.dvToImageCor(_vpoint_mouseup.x,_vpoint_mouseup.y),
+							start_point = DVDrawerUtil.dvToImageCor(_vpoint_mousedown.x,_vpoint_mousedown.y),
+							end_point = sencePoint,
+							w = end_point.x-start_point.x,
+							h = end_point.y-start_point.y;
+
+							annotaion.color = anno_color10;
+
+							
+							annotaion.sceneX = sencePoint.x;
+							annotaion.sceneY = sencePoint.y;
+
+							annotaion.shape.color = draw_color10;
+							annotaion.shape.type = ANNO_RECT+" 1 "+start_point.x+" "+start_point.y+" "+w+" "+h;
+
+							_dvContext.putImageData(_dvImageData,0,0);
+
+							var _anno = new DVRectangleAnnoClass(viewer,annotaion),
+							anno_drawer;
+							_anno.draw();
+							if(viewer==dv_viewer){
+								anno_drawer = dv_annos_drawer;
+							}else if(viewer==dv_viewer1){
+								anno_drawer = dv_annos_drawer1;
+							}else if(viewer==dv_viewer2){
+								anno_drawer = dv_annos_drawer2;
+							}else if(viewer==dv_viewer_page){
+								anno_drawer = dv_annos_drawer_page;
+							}
+							if(anno_drawer&&anno_drawer.getAnnotationList()){
+								$.each(anno_drawer.getAnnotationList(),function(index,item){
+									var acid = item.getAcid();
+									if(acid == "new"){
+										item.save();
+									}
+								});
+
+								anno_drawer.getAnnotationList().push(_anno);
+							}
+							_dvCanvas.find(".dv-measure-main").remove();
+
+
+						}
+						this.show = function(e){
+							_dvCanvas.find(".dv-measure-main").remove();
+							_dvCanvas.append(jq_main);
+							var x = e.clientX,
+							y = e.clientY -_dvToolbar_layout.height();
+							if(e.targetTouches){
+								x = e.targetTouches[0].clientX;
+								y = e.targetTouches[0].clientY-_dvToolbar_layout.height();
+							}
+							downX = x;
+							downY = y;
+
+							jq_main.css({
+								"top":y+offset+"px",
+								"left":x+offset+"px"
+							});
+							_updCorNum();
+						}
+						this.move = function(e,pageInfo,vpoint_mousedown,vpoint_mouseup,chkBounds){
+							var dpi = pageInfo.originalDPI;
+							if(jq_main&&jq_main.length){
+								var x = e.clientX,
+								y = e.clientY,
+								l,xl,yl,
+								w = 0,
+								h = 0;
+								if(e.targetTouches){
+									x = e.targetTouches[0].clientX;
+									y = e.targetTouches[0].clientY;
+								}
+
+								jq_main.css({
+									"top":y+offset-_dvToolbar_layout.height()+"px",
+									"left":x+offset+"px"
+								});
+								_chkBounds = chkBounds;
+
+								if(chkBounds){
+									_vpoint_mousedown = vpoint_mousedown;
+									_vpoint_mouseup = vpoint_mouseup;
+									anno_text = "";
+									anno_text_html = "";
+									xl = Math.abs(vpoint_mousedown.x-vpoint_mouseup.x);
+									yl = Math.abs(vpoint_mousedown.y-vpoint_mouseup.y);
+									l = Math.sqrt(Math.pow(xl,2)+Math.pow(yl,2)),
+									showPoint = (dv_user_preference&&dv_user_preference.show_points==1);
+									if(dv_user_preference&&dv_user_preference.measurement_units==MEASURE_IMPERIAL){
+										cors.l1 = Math.round(l/dpi*100)/100;
+										cors.x1 = Math.round(xl/dpi*100)/100;
+										cors.y1 = Math.round(yl/dpi*100)/100;
+										anno_text += "L: "+cors.l1+" "+MEASURE_INCHES+"\n";
+										anno_text += "X: "+cors.x1+" "+MEASURE_INCHES+"\n";
+										anno_text += "Y: "+cors.y1+" "+MEASURE_INCHES+"\n";
+										anno_text_html += "L: "+cors.l1+" "+MEASURE_INCHES+"<br/>";
+										anno_text_html += "X: "+cors.x1+" "+MEASURE_INCHES+"<br/>";
+										anno_text_html += "Y: "+cors.y1+" "+MEASURE_INCHES+"<br/>";
+									}else{
+										cors.l1 = Math.round(l/dpi*INCHES_MM*100)/100;
+										cors.x1 = Math.round(xl/dpi*INCHES_MM*100)/100;
+										cors.y1 = Math.round(yl/dpi*INCHES_MM*100)/100;
+										anno_text += "L: "+cors.l1+" "+MEASURE_MM+"\n";
+										anno_text += "X: "+cors.x1+" "+MEASURE_MM+"\n";
+										anno_text += "Y: "+cors.y1+" "+MEASURE_MM+"\n";		
+										anno_text_html += "L: "+cors.l1+" "+MEASURE_MM+"<br/>";
+										anno_text_html += "X: "+cors.x1+" "+MEASURE_MM+"<br/>";
+										anno_text_html += "Y: "+cors.y1+" "+MEASURE_MM+"<br/>";						
+									}
+									cors.l2 = Math.round(l*100)/100;
+									cors.x2 = Math.round(xl*100)/100;
+									cors.y2 = Math.round(yl*100)/100;
+									if(showPoint){
+										anno_text += "L: "+cors.l2+" "+MEASURE_POINTS+"\n";
+										anno_text += "X: "+cors.x2+" "+MEASURE_POINTS+"\n";
+										anno_text += "Y: "+cors.y2+" "+MEASURE_POINTS;	
+										anno_text_html += "L: "+cors.l2+" "+MEASURE_POINTS+"<br/>";
+										anno_text_html += "X: "+cors.x2+" "+MEASURE_POINTS+"<br/>";
+										anno_text_html += "Y: "+cors.y2+" "+MEASURE_POINTS;	
+									}
+									
+								}else{
+									cors.l1 = OUT_BOUND_TEXT;
+									cors.x1 = OUT_BOUND_TEXT;
+									cors.y1 = OUT_BOUND_TEXT;
+									cors.l2 = OUT_BOUND_TEXT;
+									cors.x2 = OUT_BOUND_TEXT;
+									cors.y2 = OUT_BOUND_TEXT;
+								}
+								
+							}
+							_updCorNum();
+						}
+						this.check = function(){
+							if(!_chkBounds){
+								_that.clear();
+							}else{
+								jq_add_link?jq_add_link.show():null;
+							}
+						}
+						this.remove = function(){
+							_that.clear();
+						}
+						this.clear = function(){
+							if(jq_main&&jq_main.length){
+								_dvContext.putImageData(_dvImageData,0,0);
+								jq_main.remove();
+								jq_main = null;
+							}
+						}
+						this.init = function(){
+							_createElement();							
+						}
+						this.init();
+					}
+				})(DVUtil,DVEleUtil);
+			/**
+		    	 * 该内包封装的右边page控件
+		    	 * @param  {[DVPageNavigate]} DVPageNavigate [description]
+		    	 * @param  {[DVEleUtil]} eu      [基本控件的封装]
+		    	 * @return {[none]}         [description]
+		    	 */
+
 		    	(function(page,eu){
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 		    		DVPageNavigateClass = function(){
 		    			var _pageLayout,_pageLayout1,_pageLayout2,
 		    			_isIP = true,
@@ -5966,7 +6782,7 @@
 									}else if(_curPage>_totalPage){
 										_curPage = lastpage>_totalPage?_totalPage:lastpage;
 									}
-									
+									DVHistory.addJumppageRecord(lastpage);
 									if(_isSinglePreview){
 										var _previewImgs = _pagePreview.find(".previewImgDiv"),
 										_previewDiv = _pagePreview.find(".previewDiv:eq("+(_curPage-1)+")"),
@@ -6197,6 +7013,12 @@
 		    		}
 		    	})(DVPageNavigate,DVEleUtil);
 
+		    	/**
+		    	 * 该内包封装的画布控件
+		    	 * @param  {[DVCanva]} Canvas [description]
+		    	 * @param  {[DVUtil]} Util      [基本控件的封装]
+		    	 * @return {[none]}         [description]
+		    	 */
 		    	(function(canvas,u){
 
 		    		DVCanvaClass = function(){
@@ -6341,6 +7163,20 @@
       						}
 
 	    			 		if(dv_toolbar_action!=TOOL_NONE){
+	    			 			if(dv_toolbar_action==TOOL_MEASURE){
+	    			 				if(dv_measuer){
+	    			 					dv_measuer.clear();
+// 	    			 					_context.putImageData(_orgImgdata,0,0);
+	    			 					dv_measuer = null;
+	    			 				}
+	    			 				dv_measuer = new DVMeasureEleClass(viewer);
+	    			 				dv_measuer.show(e);
+	    			 				DVToolbar.Toolbar.getDVMeasure().cancelRewrite = function(){
+	    			 					//_context.putImageData(_orgImgdata,0,0);
+	    			 					dv_measuer?dv_measuer.clear():null;
+	    			 					dv_measuer = null;
+	    			 				}
+	    			 			}
 	    			 			_orgImgdata = _context.getImageData(0, 0,_canvas.width,_canvas.height);
 	    			 			_mousedownOffsetX = x;
 	    			 			_mousedownOffsetY = y;
@@ -6422,33 +7258,66 @@
 
 
 		    				if(dv_toolbar_action!=TOOL_NONE){
-		    					if(dv_toolbar_action==TOOL_MEASURE){
-		    						var w = Math.abs(x - _mousedownOffsetX),
-		    			 			h = Math.abs(y - _mousedownOffsetY),
-		    			 			_x = _mousedownOffsetX>x ? x :_mousedownOffsetX,
-		    			 			_y = _mousedownOffsetY>y ? y :_mousedownOffsetY;
+		    					if(dv_toolbar_action==TOOL_MEASURE&&_dragging){
+
+
+		    						var w = Math.abs(x - _mousedownClientX),
+		    			 			h = Math.abs(y - _mousedownClientY),
+		    			 			_x = _mousedownClientX>x ? x :_mousedownClientX,
+		    			 			_y = _mousedownClientY>y ? y :_mousedownClientY,
+		    			 			lX,lY,
+		    			 			opoint = new OpenSeadragon.Point(_x,_y),
+		    			 			vpoint = _viewport.windowToImageCoordinates( opoint ),		    			 			
+		    			 			vpoint_mouseup,
+		    			 			vpoint_mouseup_zoom = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(cx,cy) ));
+		    			 			switch(_that.rotation){
+										case 180:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = 2*center.x-vpoint_mouseup_zoom.x;
+											lY = 2*center.y-vpoint_mouseup_zoom.y+Math.abs(vpoint_mouseup_zoom.y-cy);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 270:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.y+center.x-vpoint_mouseup_zoom.y;
+											lY = vpoint_mouseup_zoom.x+center.y-center.x+Math.abs(vpoint_mouseup_zoom.y-cy);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										case 90:
+											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
+											lX = center.x-center.y+vpoint_mouseup_zoom.y;
+											lY = center.y+center.x-vpoint_mouseup_zoom.x+Math.abs(vpoint_mouseup_zoom.y-cy);
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
+										break;
+										default:
+											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(cx,cy) );
+										break;
+									}
+		    			 			var page_info = _getPageInfo(viewer);
+
+
+									var chkBounds = _chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info);
+
 		    			 			_context.putImageData(_orgImgdata,0,0);
 		    			 			_context.save();
 		    			 			_context.globalAlpha=0.5;
-		    			 			if(!_chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info)){
+		    			 			
+		    			 			if(!chkBounds){
 		    			 				_context.strokeStyle=ERROR_COLOR_STROKE;
-// 		    			 				_context.fillStyle=ERROR_COLOR_FILL;
 		    			 			}else{
 		    			 				_context.strokeStyle="#101B9A";
-// 		    			 				_context.fillStyle="#5E95D5";
 		    			 			}
 		    			 			
 									_context.beginPath();
-									_context.rect(_x, _y, w, h);
+									_context.rect(_mousedownClientX, _mousedownOffsetY, x-_mousedownClientX, y-_mousedownOffsetY);
 									_context.stroke();
-// 									_context.fill();
-// 		    			 			_context.restore();
 
 		    			 			_context.beginPath();
 									_context.moveTo(_mousedownClientX, _mousedownOffsetY);
 									_context.lineTo(x, y);
 									_context.stroke();
 		    			 			_context.restore();
+		    			 			dv_measuer?dv_measuer.move(e,page_info,_vpoint_mousedown,vpoint_mouseup,chkBounds):_dragging=false;
 		    					}else if(dv_toolbar_action==TOOL_MOVE_ANNO){
 		    						if(dv_move_anno){
 		    							dv_move_anno.moveAnnotation(e);
@@ -6592,54 +7461,9 @@
 //		    				e.preventDefault();
 		    				if(dv_toolbar_action!=TOOL_NONE){
 		    					if(dv_toolbar_action==TOOL_MEASURE){
-		    						var w = Math.abs(x - _mousedownClientX),
-		    			 			h = Math.abs(y - _mousedownClientY),
-		    			 			_x = _mousedownClientX>x ? x :_mousedownClientX,
-		    			 			_y = _mousedownClientY>y ? y :_mousedownClientY,
-		    			 			opoint = new OpenSeadragon.Point(_x,_y),
-		    			 			vpoint = _viewport.windowToImageCoordinates( opoint ),		    			 			
-		    			 			vpoint_mouseup,
-		    			 			vpoint_mouseup_zoom = _viewport.viewportToViewerElementCoordinates(_viewport.windowToViewportCoordinates( new OpenSeadragon.Point(x,y) ));
-		    			 			switch(_that.rotation){
-										case 180:
-											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-											lX = 2*center.x-vpoint_mouseup_zoom.x;
-											lY = 2*center.y-vpoint_mouseup_zoom.y+Math.abs(vpoint_mouseup_zoom.y-y);
-											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
-										break;
-										case 270:
-											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-											lX = center.y+center.x-vpoint_mouseup_zoom.y;
-											lY = vpoint_mouseup_zoom.x+center.y-center.x+Math.abs(vpoint_mouseup_zoom.y-y);
-											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
-										break;
-										case 90:
-											var center = _viewport.viewportToViewerElementCoordinates(_viewport.getCenter(true));
-											lX = center.x-center.y+vpoint_mouseup_zoom.y;
-											lY = center.y+center.x-vpoint_mouseup_zoom.x+Math.abs(vpoint_mouseup_zoom.y-y);
-											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(lX,lY) );
-										break;
-										default:
-											vpoint_mouseup = _viewport.windowToImageCoordinates( new OpenSeadragon.Point(x,y) );
-										break;
-									}
-		    			 			var vpoint_wh = {w:(Math.abs(vpoint_mouseup.x - _vpoint_mousedown.x)),h:(Math.abs(vpoint_mouseup.y - _vpoint_mousedown.y))},
-		    			 			page_info = _getPageInfo(viewer),
-		    			 			pw = page_info.originalWidthPx,
-		    			 			ph = page_info.originalHeightPx,
-		    			 			b_x = vpoint.x/pw,
-		    			 			b_y = vpoint.y/pw,
-		    			 			b_w = Math.abs(vpoint_wh.w)/pw,
-		    			 			b_h = b_w / _viewport.getAspectRatio(),
-		    			 			bounds = new OpenSeadragon.Rect(b_x,b_y,b_w,b_h);
-
-		    			 			_context.putImageData(_orgImgdata,0,0);
-		    			 			if(!_chkOverBounds(_vpoint_mousedown,vpoint_mouseup,page_info)){
-		    			 				_dragging = false;
-		    			 				return;
-		    			 			}
-// 									_viewport.fitBounds(bounds);
-// 									DVToolbar.Toolbar.getDVZoom().cancel();
+		    						
+		    			 			_dragging = false;
+		    			 			dv_measuer?dv_measuer.check():null;
 									viewer.setMouseNavEnabled(true);
 		    					}else if(dv_toolbar_action==TOOL_MOVE_ANNO){
 		    						if(dv_move_anno){
@@ -6754,9 +7578,9 @@
 								            "timestamp": new Date(),
 								            "type": null,
 								            "user": {
-								                "firstName": urlPara.forename,
+								                "firstName": urlPara.forename?urlPara.forename:"",
 								                "id": urlPara.userId?urlPara.userId:"-1",
-								                "lastName": urlPara.surname,
+								                "lastName": urlPara.surname?urlPara.forename:"",
 								                "loginName": null,
 								                "password": null
 								            }
@@ -6764,7 +7588,12 @@
 				    				_image_data_temp = _context.getImageData(0, 0,_canvas.width,_canvas.height),
 				    				draw_color = dv_user_preference.draw_color.replace("0x","#"),
 				    				draw_color16 = dv_user_preference.draw_color.replace("0x",""),
-				    				draw_color10 = parseInt(draw_color16,16);
+				    				draw_color10 = parseInt(draw_color16,16),
+				    				anno_color = dv_user_preference.annotation_color.replace("0x",""),
+				    				anno_color10 = parseInt(anno_color,16);
+
+				    				annotaion.color = anno_color10;
+				    				
 
 									
 									
@@ -7032,9 +7861,6 @@
 						        showNavigationControl:false,
 						        crossOriginPolicy:true
 						    });
-			    			    	
-
-			    			 // return _viewer;
 			    		}
 
 			    		this.initEvents = function(){
@@ -7087,6 +7913,8 @@
 				    			 	}, 1000);   
 			    			 }
 
+			    			 
+
 			    			 function _animationFinshEvent(e){
 			    			 	var userData = e.userData;
 			    			 	if(isinitanno){
@@ -7096,10 +7924,11 @@
 				    			 	}, 1000);   
 				    			 	isinitanno = false; 			 	
 			    			 	}else{
-			    			 		setTimeout(function(){
+			    			 		setTimeout(function(){		    			
 				    			 		dv_annos_drawer.draw();
 				    			 	}, 1000); 
 			    			 	}
+			    			 	DVHistory.addMovementRecord(_viewer);
 			    			 }
 
 			    			 function _animationEvent(e){
@@ -7130,7 +7959,7 @@
 
 						this.compare = function(){
 							//temp level
-							var level = 10;
+						var level = 25;
 							_diffCanvas.attr({"width":_diffCanvas.width(),"height":_diffCanvas.height()})
 							if(!_diffContext){								
 								_diffContext = _diffCanvas[0].getContext("2d");
@@ -7367,6 +8196,7 @@
 				    			 _viewer.addHandler("animation-start",_animationStartEvent);
 				    			 _viewer.addHandler("animation-finish",_animationFinshEvent,{"test":"animation"});
 				    			 _viewer.addHandler("animation",_animationEvent,{"test":"animation"});
+				    			
 
 				    			
 
@@ -7417,9 +8247,12 @@
 				    			 		snycAnimation1 = true;
 				    			 		dv_viewer2.setMouseNavEnabled(false);
 				    			 	}
+// 				    			 	DVHistory.addMovementRecord(_viewer);
+				    			 	 
 				    			 }
 
 				    			 function _animationFinshEvent(e){
+				    			 	DVHistory.addMovementRecord(_viewer);
 				    			 	var userData = e.userData;
 				    			 	if(isinitanno){
 					    			 	setTimeout(function(){
@@ -7477,6 +8310,7 @@
 				    			 _viewer.addHandler("animation-start",_animationStartEvent);
 				    			 _viewer.addHandler("animation-finish",_animationFinshEvent,{"test":"animation"});
 				    			 _viewer.addHandler("animation",_animationEvent,{"test":"animation"});
+				    			 
 
 				    			 function _openEvent(e){
 				    			 	_viewer = e.eventSource,
@@ -7525,10 +8359,12 @@
 				    			 		snycAnimation2 = true;
 				    			 		dv_viewer1?dv_viewer1.setMouseNavEnabled(false):null;
 				    			 	}
+// 				    			 	DVHistory.addMovementRecord(_viewer);
 
 				    			 }
 
 				    			 function _animationFinshEvent(e){
+				    			 	DVHistory.addMovementRecord(_viewer);
 				    			 	var userData = e.userData;
 				    			 	if(isinitanno){
 					    			 	setTimeout(function(){
@@ -7698,11 +8534,11 @@
 			    			_that.initEvents();
 			    		}
 
-			    		this.initEvents = function(){
-			    			var isinitanno = true
-			    			 _viewer.addHandler("open",_openEvent);
-			    			 _viewer.addHandler("animation-finish",_animationFinshEvent,{"test":"animation"});
-			    			 _viewer.addHandler("animation",_animationEvent,{"test":"animation"});
+		    		this.initEvents = function(){
+		    			var isinitanno = true
+		    			 _viewer.addHandler("open",_openEvent);
+		    			 _viewer.addHandler("animation-finish",_animationFinshEvent,{"test":"animation"});
+		    			 _viewer.addHandler("animation",_animationEvent,{"test":"animation"});
 
 			    			 function _openEvent(e){
 			    			 	_viewer = e.eventSource,
@@ -7772,6 +8608,11 @@
 
 		    	})(DVCanva,DVUtil);
 
+		    	/**
+		    	 * 该内包封装的主方法初始化
+		    	 * @param  {[DVMain]} Main [description]
+		    	 * @return {[none]}        [description]
+		    	 */
 		    	(function(main){
 		    		DVClass = function(){
 					//private
@@ -7836,7 +8677,6 @@
 						//toolbar
 						_dvToolbar_layout.append(_dvToolbar);
 						//annotation/approval list
-						// _dvListTab.append(_dvSliderIcon);
 						_dvListTab_layout.append(_dvListTab);
 						//dv canvas
 						_dvCanvas_layout.append(_dvCanvasContaiiner_layout);
@@ -7857,7 +8697,6 @@
 						status = "1,2,3",
 						session;
 
-						DVUtil.callJSON("clientConfig.davinci",{"sessionKey":PUBLIC_CONFIGS.session_key,"dataType":DATA_TYPE},null,_success,_fail)
 						function _success(data){
 							dv_config_bean = data;
 							if(dv_config_bean&&dv_config_bean.sessionType){
@@ -7881,7 +8720,7 @@
 							callback(data);
 							throw Error(data);
 						}
-						
+						DVUtil.callJSON("clientConfig.davinci",{"sessionKey":PUBLIC_CONFIGS.session_key,"dataType":DATA_TYPE},null,_success,_fail)
 						
 						
 					}
@@ -7930,23 +8769,12 @@
 									DVTableList.TabNav = new DVTabNavClass();						
 									DVBottomToolbar.BToolbar = new DVBottomToolbarClass();		
 									dv_canvas_page = new DVPageCanvaClass();	
-									//_that.initPageInfo(function(){
-										//_that.initImageInfo(function(){
-											
-											_that.createCanvas();
-											//DVPageNavigate.pageNav = new DVPageNavigateClass();
-											
-										//});
-									//});
+									_that.createCanvas();
+                            		DVAttachFileList.init();
 								}
-								
-
-
 							});
 						});
-						
 					}
-					
 				}
 
 				DVClientClass = function(){

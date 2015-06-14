@@ -9,6 +9,7 @@ html,body{
 		-moz-user-select:none;
 		-ms-user-select:none;
 		user-select:none;
+		cursor:default;
 	}
 	.dvMain_layout{
 		/*width: 100%;*/
@@ -22,7 +23,8 @@ html,body{
 		line-height: 50px;
 		display: table;
 		width: 100%;
-	}
+	
+}
 	.dvBottomToolbar_layout{
 		height: 50px;
 		background-color: #272822;
@@ -34,7 +36,9 @@ html,body{
 		width: 100%;
 		opacity:0.5;
 		z-index: 300;
-	}
+	
+		box-shadow: 0 0 10px #333333;
+}
 	.dvBottomToolbar_layout:hover{
 		opacity:0.8;
 	}
@@ -195,8 +199,8 @@ html,body{
 	}
 	.dv-annotation-view{
 		position: absolute;
-		width: 340px;
-		max-height: 220px;
+		width: 300px;
+		max-height: 325px;
 		top: 0px;
 		left: 0px;
 		background-color: #666;
@@ -205,34 +209,42 @@ html,body{
 		z-index: 200;
 		-webkit-box-shadow: #666 0px 0px 10px;
 		-moz-box-shadow: #666 0px 0px 10px;
+		box-shadow: #666 0px 0px 10px;
 		border-radius: 4px;
   		border: solid 2px rgba(55,55,55,0.7);
 	}
 
 	.annotation_view_box{
-		overflow-y: auto;
-	 	overflow-x: hidden;
-	  	width: 325px;
-	  	max-height: 193px;
+		overflow: hidden;
+	  	width: 289px;
+	  	max-height: 289px;
 	  	padding: 0 3px 0 0;
+	}
+
+	.annotation_view_box .panel-body{
+		max-height: 175px;
+		overflow-y:auto;
 	}
 
 	.dv-annotation-view.selected{
 		z-index: 201;
 	}
-	.dv-annotation-view-layout-left{
-		width: 30px;
-		height: 120px;
-		float: left;
+
+	.anno-comment-box{
+		width: 255px;
+		border: solid 1px #cccccc; 
+		border-radius: 3px;
+		margin-bottom: 5px;
 	}
-	.dv-annotation-view-layout-right{
-		float: left;
+	.dv-annotation-view-layout-heeder{
+		padding: 0 5px;
+		font-size: 12px;
+	}
+	.dv-annotation-view-layout-body{
+		
 	}
 	.dv-annotation-view-layout-bottom{
-		width: 280px;
 		height: 20px;
-		float: left;
-        text-align: right;
 	}
 	.dv-annotation-view-btn{
 		width: 20px;
@@ -251,10 +263,18 @@ html,body{
 
 
 	textarea.form-control.dv-annotation-text{
-		width: 280px;
+		width: 243px;
 		height: 120px;
 		margin: 5px;
 		resize: none;
+	}
+	.dv-annotation-display-text{
+		width: 243px;
+		max-height: 120px;
+		margin:0px 5px;
+		padding: 5px 0;
+		border-top: solid 1px #cccccc; 
+		border-bottom: solid 1px #cccccc; 
 	}
 	.dv-annotation{
 		position: absolute;
@@ -274,11 +294,21 @@ html,body{
 		user-select: none !important;
 	}
 
+	.panel-group{margin-bottom: 5px;}
 	.panel-heading,.panel-body{
 		padding: 5px;
 	}
 	.panel-title{
 		font-size: 12px;
+	}
+
+	.annotation_file_box>.panel-default>.panel-heading{
+		color: #fff;
+		background-color: #648FDA;
+	}
+
+	.annotation_file_box .panel-body{
+		max-height: 65px;
 	}
 
 	.dvListTab table div{
@@ -376,7 +406,11 @@ html,body{
 	.btn-660099:hover,.btn-660099:focus,.btn-660099.focus,.btn-660099:active,.btn-660099.active
 	{color: #333; background-color: #660099; border-color: #ccc; outline: none;}
 
-
+	.selected-color{
+		-webkit-box-shadow: #666 0px 0px 10px;
+		-moz-box-shadow: #666 0px 0px 10px;
+		box-shadow: #666 0px 0px 10px;
+	}
 
 
 	.dvUnselected{
@@ -385,31 +419,30 @@ html,body{
 		-ms-user-select: none !important;
 		user-select: none !important;
 	}
-.form-group {
-	margin-bottom: 15px;
-	min-height: 30px;
-}
 
-.div_loading{
-    z-index:1001;
-    text-align: center;
-    position: absolute;      /*绝对定位*/   
-    top: 50%;                  /* 距顶部50%*/   
-    left: 50%;                  /* 距左边50%*/   
-    height: 200px;  margin-top: -100px;   /*margin-top为height一半的负值*/   
-    width: 400px;  margin-left: -200px;    /*margin-left为width一半的负值*/ 
-}
-.div_loading_mask{
-    height:100%;
-    width:100%; 
-    position:fixed; 
-    _position:absolute; 
-    top:0; 
-    z-index:1000;
-    opacity:0.3; 
-    filter: alpha(opacity=30); 
-    background-color:#000;
-}
+	.form-group {
+		margin-bottom: 15px;
+		min-height: 30px;
+	}
+
+	.div_loading{
+	    z-index:1001;
+	    text-align: center;
+	    position: absolute;      
+	    top: 50%;                
+	    left: 50%;            
+	    height: 200px;  margin-top: -100px;   
+	    width: 400px;  margin-left: -200px;   
+	}
+	.div_loading_mask{
+	    height:100%;
+	    width:100%; 
+	    position:fixed; 
+	    top:0; 
+	    z-index:1000;
+	    opacity:0.3; 
+	    background-color:#000;
+	}
 
 
 canvas{
@@ -418,4 +451,96 @@ canvas{
 .dvCompareCanvas{
 	width:100%;
 	height:100%;
+}
+.dv-measure-main{
+	width:300px;
+	height:150px;
+	line-height:1.5;
+	font-size:12px;
+	color:#5D5D5B;
+	position: absolute;
+	border-radius:5px;
+	border:solid 1px #5D5D5B;
+	background-color:#FFFFFF;
+	filter:alpha(opacity=80);
+	opacity:0.8;
+	box-shadow:0 0 5px #999999;
+	z-index: 300;
+}
+.dv-measure-main:hover{
+	filter:alpha(opacity=80);
+	opacity:0.8;
+}
+.dv-measure-main .title{
+	width:100%;
+	margin: auto;
+	height:30px;
+	line-height:30px;
+	padding: 0 2.5%;
+	background-color:#999999;
+	border-radius:5px;
+	box-shadow:0 0 5px #333333;
+	box-sizing:border-box;
+	color:#FFFFFF;
+	font-size: 17px;
+	cursor: default;
+	font-weight:border;
+}
+
+.dv-measure-main .title a{
+	color:#FFFFFF;	
+	float: right;
+	font-size: 13px;
+}
+.dv-measure-main .left-side,.dv-measure-main .right-side{
+	width:50%;
+	float:left;
+}
+
+.dv-measure-main .row{
+	width:90%;
+	margin:5px auto;
+	overflow:hidden;
+}
+.dv-measure-main .row span{
+	width: 44%;
+	height: 30px;
+	line-height: 30px;
+	float:left;
+	margin: 0 15px;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	text-align: left;
+}
+.dv-measure-main .row label{
+	height: 30px;
+	float:left;
+	margin:0;
+	line-height: 30px;
+}
+
+dv-measure-rect,dv-measure-line{
+	stroke:#101B9A;
+}
+
+.dv-measure-main.full{
+	width:150px;
+}
+.dv-measure-main.full .title{
+	font-size: 13px;
+	padding: 0 5%;
+}
+.dv-measure-main.full .title span{
+	display:none;
+}
+.dv-measure-main.full .left-side{
+	width:100%;
+	float:left;
+}
+.dv-measure-main.full .right-side{
+	display:none;
+}
+.dv-measure-main.full .row span{
+	width: 50%;
+	text-align:center;
 }
